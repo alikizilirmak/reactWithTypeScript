@@ -1,0 +1,42 @@
+import { calculateAddition } from './AdditionOperator'
+import { calculateDivision } from './DivisionOperator'
+import { calculateMultiplication } from './MultiplicationOperator'
+import { OperatorButtons } from './OperatorOptions'
+import { calculatePercent } from './PercentOperator'
+import { calculatePermille } from './PermilleOperator'
+import { calculatePower } from './PowerOperator'
+import { calculateRoot } from './RootOperator'
+import { calculateSubtraction } from './SubtractionOperator'
+import type { OperationCalculator, Operator } from './types'
+
+// App.tsx bu dosyadan tek import ile tüm operatör altyapısını alabilsin diye
+// "barrel file" (toplayıcı dosya) yaklaşımı kullanıyoruz.
+export { OperatorButtons }
+export type { OperationCalculator, Operator, OperatorButtonProps } from './types'
+
+// Operatör -> hesaplayıcı eşlemesi.
+// App tarafında switch-case yazmak yerine bu kayıt tablosunu kullanıyoruz.
+export const operatorCalculators: Record<Operator, OperationCalculator> = {
+  '+': calculateAddition,
+  '-': calculateSubtraction,
+  '*': calculateMultiplication,
+  '/': calculateDivision,
+  '^': calculatePower,
+  '√': calculateRoot,
+  '%': calculatePercent,
+  '‰': calculatePermille,
+}
+
+// Basit hesap makinesi modunda görünmesini istediğimiz 4 temel operatör.
+export const basicOperators: Operator[] = ['+', '-', '*', '/']
+
+export const isBasicOperator = (operator: Operator): boolean =>
+  basicOperators.includes(operator)
+
+// Bazı UI davranışlarını (placeholder/hint) operatör grubuna göre değiştirmek için
+// küçük yardımcı fonksiyonlar kullanıyoruz.
+export const isDegreeOperator = (operator: Operator): boolean =>
+  operator === '^' || operator === '√'
+
+export const isRatioOperator = (operator: Operator): boolean =>
+  operator === '%' || operator === '‰'
