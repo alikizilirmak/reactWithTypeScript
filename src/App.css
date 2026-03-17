@@ -1,3 +1,4 @@
+/* Hesap makinesinin kart görünümü */
 .calculator {
   width: min(440px, 92vw);
   padding: 1.5rem;
@@ -6,23 +7,27 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
+/* Başlık boyutu ve boşluk ayarı */
 .calculator h1 {
   margin: 0;
   font-size: 1.6rem;
 }
 
+/* Açıklama metninin rengi ve boşlukları */
 .calculator p {
   margin-top: 0.5rem;
   margin-bottom: 1.25rem;
   color: #4b5563;
 }
 
+/* 1. sayı - işlem - 2. sayı alanlarını grid ile hizalıyoruz */
 .inputs {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 0.75rem;
 }
 
+/* Input ve select için ortak alan stili */
 .inputs input,
 .inputs select {
   border: 1px solid #d1d5db;
@@ -31,6 +36,7 @@
   font-size: 1rem;
 }
 
+/* Hesapla butonu */
 .calculator button {
   margin-top: 1rem;
   width: 100%;
@@ -43,10 +49,12 @@
   cursor: pointer;
 }
 
+/* Hover durumunda daha koyu mavi */
 .calculator button:hover {
   background: #1d4ed8;
 }
 
+/* Sonuç kutusu */
 .result {
   margin-top: 1rem;
   padding: 0.75rem 0.8rem;
@@ -55,6 +63,7 @@
   color: #1e3a8a;
 }
 
+/* "Sonuç:" etiketini kalın göster */
 .result span {
   font-weight: 700;
 }
