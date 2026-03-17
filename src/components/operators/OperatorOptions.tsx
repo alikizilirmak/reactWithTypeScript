@@ -10,6 +10,8 @@ import { SubtractionOperatorOption } from './SubtractionOperator'
 export function OperatorOptions() {
   return (
     <>
+      {/* Select içindeki option'ları ayrı operatör componentlerinden topluyoruz. */}
+      {/* Böylece bir operatörü eklemek/silmek tek dosya değişikliğiyle yapılır. */}
       <AdditionOperatorOption />
       <SubtractionOperatorOption />
       <MultiplicationOperatorOption />

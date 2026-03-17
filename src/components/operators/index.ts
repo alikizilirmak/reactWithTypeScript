@@ -9,9 +9,13 @@ import { calculateRoot } from './RootOperator'
 import { calculateSubtraction } from './SubtractionOperator'
 import type { OperationCalculator, Operator } from './types'
 
+// App.tsx bu dosyadan tek import ile tüm operatör altyapısını alabilsin diye
+// "barrel file" (toplayıcı dosya) yaklaşımı kullanıyoruz.
 export { OperatorOptions }
 export type { OperationCalculator, Operator } from './types'
 
+// Operatör -> hesaplayıcı eşlemesi.
+// App tarafında switch-case yazmak yerine bu kayıt tablosunu kullanıyoruz.
 export const operatorCalculators: Record<Operator, OperationCalculator> = {
   '+': calculateAddition,
   '-': calculateSubtraction,
@@ -23,6 +27,8 @@ export const operatorCalculators: Record<Operator, OperationCalculator> = {
   '‰': calculatePermille,
 }
 
+// Bazı UI davranışlarını (placeholder/hint) operatör grubuna göre değiştirmek için
+// küçük yardımcı fonksiyonlar kullanıyoruz.
 export const isDegreeOperator = (operator: Operator): boolean =>
   operator === '^' || operator === '√'
 

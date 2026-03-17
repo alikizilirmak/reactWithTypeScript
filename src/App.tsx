@@ -8,6 +8,7 @@ import {
   type Operator,
 } from './components/operators'
 
+// Geçmiş kaydında hem hesaplanan metni hem de UI davranışı için gereken alanları tutuyoruz.
 type HistoryItem = {
   firstValue: string
   secondValue: string
@@ -147,7 +148,8 @@ function App() {
       return
     }
 
-    // Seçilen operatörün kendi component dosyasındaki hesaplayıcıyı çağırıyoruz.
+    // Modüler yapı: App burada "nasıl hesaplanır" detayını bilmez.
+    // Seçilen operatörün kendi dosyasındaki hesaplayıcıyı merkezi kayıt tablosundan çağırır.
     const { resultText, isError } = operatorCalculators[operator](first, second)
     setResult(resultText)
 
@@ -178,6 +180,7 @@ function App() {
     setResult(item.result)
   }
 
+  // Placeholder metnini operatör tipine göre değiştiriyoruz.
   const secondInputPlaceholder = isDegreeOperator(operator)
     ? 'derece'
     : isRatioOperator(operator)
@@ -210,6 +213,7 @@ function App() {
             // Select string döndürdüğü için Operator tipine cast ediyoruz.
             onChange={(event) => setOperator(event.target.value as Operator)}
           >
+            {/* Option listesi ayrı component'te; böylece App dosyası sade kalır. */}
             <OperatorOptions />
           </select>
           <input
