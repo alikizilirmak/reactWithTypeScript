@@ -46,7 +46,6 @@ function App() {
     useState<boolean>(false)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
-  const lastRecordedJobIdRef = useRef<number | null>(null)
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
@@ -165,15 +164,6 @@ function App() {
     resultText: string,
     isError: boolean,
   ) => {
-    // Sonuç callback'i bir şekilde tekrar gelirse (ör. StrictMode),
-    // aynı job'ı geçmişe ikinci kez yazmayız.
-    if (lastRecordedJobIdRef.current === finishedJob.id) {
-      setCalculationJob(null)
-      return
-    }
-
-    lastRecordedJobIdRef.current = finishedJob.id
-
     // ResultText'i her durumda ekrana basıyoruz (hata mesajı da olabilir).
     setDisplayValue(resultText)
     addToHistory(
