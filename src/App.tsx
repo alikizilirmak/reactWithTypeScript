@@ -11,6 +11,7 @@ type HistoryItem = {
   operator: Operator
   result: string
   expression: string
+  isError: boolean
 }
 
 function App() {
@@ -83,6 +84,7 @@ function App() {
     second: string,
     selectedOperator: Operator,
     resultText: string,
+    isError = false,
   ) => {
     const displayFirst = toDisplayValue(first)
     const displaySecond = toDisplayValue(second)
@@ -92,6 +94,7 @@ function App() {
       secondValue: second,
       operator: selectedOperator,
       result: resultText,
+      isError,
       expression: buildExpression(
         displayFirst,
         selectedOperator,
@@ -109,12 +112,14 @@ function App() {
     second: number,
     selectedOperator: Operator,
     resultText: string,
+    isError = false,
   ) => {
     addToHistoryByValues(
       first.toString(),
       second.toString(),
       selectedOperator,
       resultText,
+      isError,
     )
   }
 
@@ -127,7 +132,7 @@ function App() {
     if (first === null || second === null) {
       const errorResult = 'Lütfen geçerli sayılar girin.'
       setResult(errorResult)
-      addToHistoryByValues(firstValue, secondValue, operator, errorResult)
+      addToHistoryByValues(firstValue, secondValue, operator, errorResult, true)
       return
     }
 
@@ -135,7 +140,7 @@ function App() {
     if (operator === '/' && second === 0) {
       const errorResult = '0 ile bölme yapılamaz.'
       setResult(errorResult)
-      addToHistory(first, second, operator, errorResult)
+      addToHistory(first, second, operator, errorResult, true)
       return
     }
 
@@ -143,7 +148,7 @@ function App() {
     if (operator === '√' && second === 0) {
       const errorResult = 'Kök derecesi 0 olamaz.'
       setResult(errorResult)
-      addToHistory(first, second, operator, errorResult)
+      addToHistory(first, second, operator, errorResult, true)
       return
     }
 
@@ -173,14 +178,14 @@ function App() {
           if (!Number.isInteger(second)) {
             const errorResult = 'Negatif sayıda derece tam sayı olmalı.'
             setResult(errorResult)
-            addToHistory(first, second, operator, errorResult)
+            addToHistory(first, second, operator, errorResult, true)
             return
           }
 
           if (Math.abs(second) % 2 === 0) {
             const errorResult = 'Negatif sayının çift dereceden kökü yoktur.'
             setResult(errorResult)
-            addToHistory(first, second, operator, errorResult)
+            addToHistory(first, second, operator, errorResult, true)
             return
           }
 
@@ -324,7 +329,7 @@ function App() {
                 <li key={`${item.expression}-${index}`}>
                   <button
                     type="button"
-                    className="history-item"
+                    className={`history-item${item.isError ? ' error' : ''}`}
                     onClick={() => applyHistoryItem(item)}
                   >
                     {item.expression}
