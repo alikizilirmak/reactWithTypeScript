@@ -1,9 +1,17 @@
 import { useState } from 'react'
 import './App.css'
 
-// Sadece bu 4 işlem desteklensin diye bir union type tanımlıyoruz.
+// Uygulamada desteklenen işlemler için bir union type tanımlıyoruz.
 // Böylece yanlış bir operatör değerini TypeScript derleme aşamasında yakalar.
-type Operator = '+' | '-' | '*' | '/'
+type Operator = '+' | '-' | '*' | '/' | '^' | '√'
+
+type HistoryItem = {
+  firstValue: string
+  secondValue: string
+  operator: Operator
+  result: string
+  expression: string
+}
 
 function App() {
   // Input alanlarından gelen değerleri string olarak tutuyoruz.
@@ -20,7 +28,7 @@ function App() {
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
-  const [history, setHistory] = useState<string[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>([])
 
   // Input'a yazılırken sadece sayıya uygun karakterlere izin veriyoruz.
   // Böylece "e" gibi değerler daha giriş aşamasında engellenir.
@@ -49,6 +57,38 @@ function App() {
     return Number.isFinite(parsedValue) ? parsedValue : null
   }
 
+  // Geçmişte görünecek ifade metnini tek noktadan üretmek okunabilirliği artırır.
+  const buildExpression = (
+    first: number,
+    selectedOperator: Operator,
+    second: number,
+    resultText: string,
+  ): string => {
+    if (selectedOperator === '√') {
+      return `${second}. dereceden kök(${first}) = ${resultText}`
+    }
+
+    return `${first} ${selectedOperator} ${second} = ${resultText}`
+  }
+
+  // Geçmiş kaydı ekleme işini yardımcı bir fonksiyona alıyoruz.
+  const addToHistory = (
+    first: number,
+    second: number,
+    selectedOperator: Operator,
+    resultText: string,
+  ) => {
+    const historyItem: HistoryItem = {
+      firstValue: first.toString(),
+      secondValue: second.toString(),
+      operator: selectedOperator,
+      result: resultText,
+      expression: buildExpression(first, selectedOperator, second, resultText),
+    }
+
+    setHistory((previousHistory) => [historyItem, ...previousHistory].slice(0, 10))
+  }
+
   // Hesapla butonuna basılınca çalışacak fonksiyon.
   const calculate = () => {
     const first = parseNumberInput(firstValue)
@@ -64,14 +104,15 @@ function App() {
     if (operator === '/' && second === 0) {
       const errorResult = '0 ile bölme yapılamaz.'
       setResult(errorResult)
+      addToHistory(first, second, operator, errorResult)
+      return
+    }
 
-      // Hatalı da olsa denenen işlemi geçmişte göstermek kullanıcıya yardımcı olur.
-      setHistory((previousHistory) =>
-        [`${first} ${operator} ${second} = ${errorResult}`, ...previousHistory].slice(
-          0,
-          10,
-        ),
-      )
+    // Kök işleminde derece 0 olamaz.
+    if (operator === '√' && second === 0) {
+      const errorResult = 'Kök derecesi 0 olamaz.'
+      setResult(errorResult)
+      addToHistory(first, second, operator, errorResult)
       return
     }
 
@@ -92,20 +133,45 @@ function App() {
       case '/':
         calculation = first / second
         break
+      case '^':
+        calculation = first ** second
+        break
+      case '√': {
+        // Negatif sayının çift dereceden kökü reel sayı değildir.
+        if (first < 0) {
+          if (!Number.isInteger(second)) {
+            const errorResult = 'Negatif sayıda derece tam sayı olmalı.'
+            setResult(errorResult)
+            addToHistory(first, second, operator, errorResult)
+            return
+          }
+
+          if (Math.abs(second) % 2 === 0) {
+            const errorResult = 'Negatif sayının çift dereceden kökü yoktur.'
+            setResult(errorResult)
+            addToHistory(first, second, operator, errorResult)
+            return
+          }
+
+          // Tek derecede işareti koruyarak kök alıyoruz.
+          const rootValue = Math.pow(Math.abs(first), 1 / Math.abs(second))
+          calculation = second > 0 ? -rootValue : -1 / rootValue
+          break
+        }
+
+        calculation = Math.pow(first, 1 / second)
+        break
+      }
       default:
         calculation = 0
     }
 
     // Sayısal sonucu string'e çevirip ekrana yansıtıyoruz.
-    setResult(calculation.toString())
+    const resultText = calculation.toString()
+    setResult(resultText)
 
     // Yeni işlemi geçmişe ekleyip sadece son 10 kaydı tutuyoruz.
-    setHistory((previousHistory) =>
-      [`${first} ${operator} ${second} = ${calculation}`, ...previousHistory].slice(
-        0,
-        10,
-      ),
-    )
+    addToHistory(first, second, operator, resultText)
   }
 
   // Formu başlangıç haline döndürmek için ayrı bir fonksiyon yazıyoruz.
@@ -123,13 +189,24 @@ function App() {
     setHistory([])
   }
 
+  // Geçmişten bir satıra tıklanınca ilgili verileri tekrar forma yüklüyoruz.
+  const applyHistoryItem = (item: HistoryItem) => {
+    setFirstValue(item.firstValue)
+    setSecondValue(item.secondValue)
+    setOperator(item.operator)
+    setResult(item.result)
+  }
+
+  const secondInputPlaceholder =
+    operator === '^' || operator === '√' ? 'derece' : '2. sayı'
+
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
     <div className="app-layout">
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
         <h1>Mini Hesap Makinesi</h1>
-        <p>Toplama, çıkarma, çarpma ve bölme</p>
+        <p>Toplama, çıkarma, çarpma, bölme, üs ve kök alma</p>
 
         {/* İlk sayı, işlem ve ikinci sayı alanlarını tek satırda topluyoruz. */}
         <div className="inputs">
@@ -153,11 +230,13 @@ function App() {
             <option value="-">-</option>
             <option value="*">*</option>
             <option value="/">/</option>
+            <option value="^">x^n</option>
+            <option value="√">n√x</option>
           </select>
           <input
             type="text"
             inputMode="decimal"
-            placeholder="2. sayı"
+            placeholder={secondInputPlaceholder}
             value={secondValue}
             // İkinci sayı değeri değiştikçe state güncellenir.
             onChange={(event) =>
@@ -165,6 +244,12 @@ function App() {
             }
           />
         </div>
+
+        {(operator === '^' || operator === '√') && (
+          <p className="input-hint">
+            Bu işlemde ikinci alan derece olarak kullanılır.
+          </p>
+        )}
 
         {/* İki aksiyonu birlikte göstermek için butonları bir grupta tutuyoruz. */}
         <div className="actions">
@@ -205,7 +290,15 @@ function App() {
           ) : (
             <ol>
               {history.map((item, index) => (
-                <li key={`${item}-${index}`}>{item}</li>
+                <li key={`${item.expression}-${index}`}>
+                  <button
+                    type="button"
+                    className="history-item"
+                    onClick={() => applyHistoryItem(item)}
+                  >
+                    {item.expression}
+                  </button>
+                </li>
               ))}
             </ol>
           )}
