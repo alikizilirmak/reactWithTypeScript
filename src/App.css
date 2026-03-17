@@ -36,9 +36,16 @@
   font-size: 1rem;
 }
 
-/* Hesapla butonu */
-.calculator button {
+/* Butonları yan yana dizmek için kapsayıcı */
+.actions {
   margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+/* Aksiyon butonlarının ortak görünümü */
+.actions button {
   width: 100%;
   border: none;
   border-radius: 0.5rem;
@@ -50,8 +57,19 @@
 }
 
 /* Hover durumunda daha koyu mavi */
-.calculator button:hover {
+.actions button:hover {
   background: #1d4ed8;
+}
+
+/* İkincil buton (Temizle) için daha nötr bir stil */
+.actions .secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+/* İkincil buton hover rengi */
+.actions .secondary:hover {
+  background: #d1d5db;
 }
 
 /* Sonuç kutusu */

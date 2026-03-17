@@ -70,6 +70,16 @@ function App() {
     setResult(calculation.toString())
   }
 
+  // Formu başlangıç haline döndürmek için ayrı bir fonksiyon yazıyoruz.
+  // Bu yaklaşım, "tek sorumluluk" prensibi açısından daha temizdir:
+  // calculate sadece hesaplar, clearValues sadece temizler.
+  const clearValues = () => {
+    setFirstValue('')
+    setSecondValue('')
+    setOperator('+')
+    setResult('0')
+  }
+
   return (
     // Uygulamanın ana kapsayıcısı.
     <main className="calculator">
@@ -105,10 +115,18 @@ function App() {
         />
       </div>
 
-      {/* Buton tıklaması hesaplama fonksiyonunu tetikler. */}
-      <button type="button" onClick={calculate}>
-        Hesapla
-      </button>
+      {/* İki aksiyonu birlikte göstermek için butonları bir grupta tutuyoruz. */}
+      <div className="actions">
+        {/* Buton tıklaması hesaplama fonksiyonunu tetikler. */}
+        <button type="button" onClick={calculate}>
+          Hesapla
+        </button>
+
+        {/* Temizle butonu tüm inputları ve sonucu varsayılan hale döndürür. */}
+        <button type="button" className="secondary" onClick={clearValues}>
+          Temizle
+        </button>
+      </div>
 
       {/* Sonuç alanı her hesaplamadan sonra state üzerinden otomatik güncellenir. */}
       <div className="result">
