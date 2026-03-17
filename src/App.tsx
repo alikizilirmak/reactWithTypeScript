@@ -3,7 +3,7 @@ import './App.css'
 
 // Uygulamada desteklenen işlemler için bir union type tanımlıyoruz.
 // Böylece yanlış bir operatör değerini TypeScript derleme aşamasında yakalar.
-type Operator = '+' | '-' | '*' | '/' | '^' | '√'
+type Operator = '+' | '-' | '*' | '/' | '^' | '√' | '%' | '‰'
 
 type HistoryItem = {
   firstValue: string
@@ -73,6 +73,14 @@ function App() {
   ): string => {
     if (selectedOperator === '√') {
       return `${second}. dereceden kök(${first}) = ${resultText}`
+    }
+
+    if (selectedOperator === '%') {
+      return `${first} sayısının %${second} değeri = ${resultText}`
+    }
+
+    if (selectedOperator === '‰') {
+      return `${first} sayısının ‰${second} değeri = ${resultText}`
     }
 
     return `${first} ${selectedOperator} ${second} = ${resultText}`
@@ -172,6 +180,14 @@ function App() {
       case '^':
         calculation = first ** second
         break
+      case '%':
+        // first'in second yüzdesini hesaplıyoruz.
+        calculation = (first * second) / 100
+        break
+      case '‰':
+        // first'in second bindesini hesaplıyoruz.
+        calculation = (first * second) / 1000
+        break
       case '√': {
         // Negatif sayının çift dereceden kökü reel sayı değildir.
         if (first < 0) {
@@ -234,7 +250,11 @@ function App() {
   }
 
   const secondInputPlaceholder =
-    operator === '^' || operator === '√' ? 'derece' : '2. sayı'
+    operator === '^' || operator === '√'
+      ? 'derece'
+      : operator === '%' || operator === '‰'
+        ? 'oran'
+        : '2. sayı'
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
@@ -242,7 +262,7 @@ function App() {
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
         <h1>Mini Hesap Makinesi</h1>
-        <p>Toplama, çıkarma, çarpma, bölme, üs ve kök alma</p>
+        <p>Toplama, çıkarma, çarpma, bölme, üs, kök, yüzde ve binde</p>
 
         {/* İlk sayı, işlem ve ikinci sayı alanlarını tek satırda topluyoruz. */}
         <div className="inputs">
@@ -268,6 +288,8 @@ function App() {
             <option value="/">/</option>
             <option value="^">x^n</option>
             <option value="√">n√x</option>
+            <option value="%">%</option>
+            <option value="‰">‰</option>
           </select>
           <input
             type="text"
@@ -282,9 +304,10 @@ function App() {
         </div>
 
         {(operator === '^' || operator === '√') && (
-          <p className="input-hint">
-            Bu işlemde ikinci alan derece olarak kullanılır.
-          </p>
+          <p className="input-hint">Bu işlemde ikinci alan derece olarak kullanılır.</p>
+        )}
+        {(operator === '%' || operator === '‰') && (
+          <p className="input-hint">Bu işlemde ikinci alan oran olarak kullanılır.</p>
         )}
 
         {/* İki aksiyonu birlikte göstermek için butonları bir grupta tutuyoruz. */}
@@ -329,7 +352,7 @@ function App() {
                 <li key={`${item.expression}-${index}`}>
                   <button
                     type="button"
-                    className={`history-item${item.isError ? ' error' : ''}`}
+                    className={`history-item ${item.isError ? 'error' : 'success'}`}
                     onClick={() => applyHistoryItem(item)}
                   >
                     {item.expression}
