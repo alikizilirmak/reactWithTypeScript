@@ -41,7 +41,7 @@ function App() {
   const [storedValue, setStoredValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
-  const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('scientific')
+  const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('basic')
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const calculationSequenceRef = useRef<number>(0)
