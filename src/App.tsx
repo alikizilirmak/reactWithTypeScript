@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import './App.css'
-
-// Uygulamada desteklenen işlemler için bir union type tanımlıyoruz.
-// Böylece yanlış bir operatör değerini TypeScript derleme aşamasında yakalar.
-type Operator = '+' | '-' | '*' | '/' | '^' | '√' | '%' | '‰'
+import {
+  isDegreeOperator,
+  isRatioOperator,
+  OperatorOptions,
+  operatorCalculators,
+  type Operator,
+} from './components/operators'
 
 type HistoryItem = {
   firstValue: string
@@ -144,86 +147,12 @@ function App() {
       return
     }
 
-    // Matematiksel olarak tanımsız durum: 0'a bölme.
-    if (operator === '/' && second === 0) {
-      const errorResult = '0 ile bölme yapılamaz.'
-      setResult(errorResult)
-      addToHistory(first, second, operator, errorResult, true)
-      return
-    }
-
-    // Kök işleminde derece 0 olamaz.
-    if (operator === '√' && second === 0) {
-      const errorResult = 'Kök derecesi 0 olamaz.'
-      setResult(errorResult)
-      addToHistory(first, second, operator, errorResult, true)
-      return
-    }
-
-    // Hesaplama sonucu bu değişkende tutulacak.
-    let calculation = 0
-
-    // Seçilen operatöre göre ilgili işlemi yapıyoruz.
-    switch (operator) {
-      case '+':
-        calculation = first + second
-        break
-      case '-':
-        calculation = first - second
-        break
-      case '*':
-        calculation = first * second
-        break
-      case '/':
-        calculation = first / second
-        break
-      case '^':
-        calculation = first ** second
-        break
-      case '%':
-        // first'in second yüzdesini hesaplıyoruz.
-        calculation = (first * second) / 100
-        break
-      case '‰':
-        // first'in second bindesini hesaplıyoruz.
-        calculation = (first * second) / 1000
-        break
-      case '√': {
-        // Negatif sayının çift dereceden kökü reel sayı değildir.
-        if (first < 0) {
-          if (!Number.isInteger(second)) {
-            const errorResult = 'Negatif sayıda derece tam sayı olmalı.'
-            setResult(errorResult)
-            addToHistory(first, second, operator, errorResult, true)
-            return
-          }
-
-          if (Math.abs(second) % 2 === 0) {
-            const errorResult = 'Negatif sayının çift dereceden kökü yoktur.'
-            setResult(errorResult)
-            addToHistory(first, second, operator, errorResult, true)
-            return
-          }
-
-          // Tek derecede işareti koruyarak kök alıyoruz.
-          const rootValue = Math.pow(Math.abs(first), 1 / Math.abs(second))
-          calculation = second > 0 ? -rootValue : -1 / rootValue
-          break
-        }
-
-        calculation = Math.pow(first, 1 / second)
-        break
-      }
-      default:
-        calculation = 0
-    }
-
-    // Sayısal sonucu string'e çevirip ekrana yansıtıyoruz.
-    const resultText = calculation.toString()
+    // Seçilen operatörün kendi component dosyasındaki hesaplayıcıyı çağırıyoruz.
+    const { resultText, isError } = operatorCalculators[operator](first, second)
     setResult(resultText)
 
     // Yeni işlemi geçmişe ekleyip sadece son 10 kaydı tutuyoruz.
-    addToHistory(first, second, operator, resultText)
+    addToHistory(first, second, operator, resultText, isError)
   }
 
   // Formu başlangıç haline döndürmek için ayrı bir fonksiyon yazıyoruz.
@@ -249,12 +178,11 @@ function App() {
     setResult(item.result)
   }
 
-  const secondInputPlaceholder =
-    operator === '^' || operator === '√'
-      ? 'derece'
-      : operator === '%' || operator === '‰'
-        ? 'oran'
-        : '2. sayı'
+  const secondInputPlaceholder = isDegreeOperator(operator)
+    ? 'derece'
+    : isRatioOperator(operator)
+      ? 'oran'
+      : '2. sayı'
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
@@ -282,14 +210,7 @@ function App() {
             // Select string döndürdüğü için Operator tipine cast ediyoruz.
             onChange={(event) => setOperator(event.target.value as Operator)}
           >
-            <option value="+">+</option>
-            <option value="-">-</option>
-            <option value="*">*</option>
-            <option value="/">/</option>
-            <option value="^">x^n</option>
-            <option value="√">n√x</option>
-            <option value="%">%</option>
-            <option value="‰">‰</option>
+            <OperatorOptions />
           </select>
           <input
             type="text"
@@ -303,10 +224,10 @@ function App() {
           />
         </div>
 
-        {(operator === '^' || operator === '√') && (
+        {isDegreeOperator(operator) && (
           <p className="input-hint">Bu işlemde ikinci alan derece olarak kullanılır.</p>
         )}
-        {(operator === '%' || operator === '‰') && (
+        {isRatioOperator(operator) && (
           <p className="input-hint">Bu işlemde ikinci alan oran olarak kullanılır.</p>
         )}
 
