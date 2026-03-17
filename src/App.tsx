@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import './App.css'
+import { CalculationComponent } from './components/calculation/CalculationComponent'
 import {
   isDegreeOperator,
   isRatioOperator,
   OperatorButtons,
-  operatorCalculators,
   type Operator,
 } from './components/operators'
 
@@ -19,6 +19,17 @@ type HistoryItem = {
   isError: boolean
 }
 
+// Hesaplama isteğini bir job olarak tutuyoruz.
+// Bu sayede hesaplamayı App dışındaki bir component tetikleyebiliyor.
+type CalculationJob = {
+  id: number
+  first: number
+  second: number
+  operator: Operator
+  source: 'equal' | 'chain'
+  nextOperator?: Operator
+}
+
 function App() {
   // React'teki "useState" bir Hook'tur.
   // Hook: component içinde veriyi (state) saklamamızı sağlar.
@@ -26,6 +37,7 @@ function App() {
   const [lastPressedValue, setLastPressedValue] = useState<string>('')
   const [storedValue, setStoredValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
+  const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
 
@@ -122,6 +134,53 @@ function App() {
     )
   }
 
+  // Hesaplama component'i sonucu döndüğünde bu fonksiyon çalışır.
+  const handleCalculationResult = (
+    finishedJob: CalculationJob,
+    resultText: string,
+    isError: boolean,
+  ) => {
+    setDisplayValue(resultText)
+    addToHistory(
+      finishedJob.first,
+      finishedJob.second,
+      finishedJob.operator,
+      resultText,
+      isError,
+    )
+
+    if (finishedJob.source === 'chain') {
+      if (isError) {
+        setStoredValue(null)
+        setPendingOperator(null)
+        setIsWaitingForSecondValue(true)
+        setCalculationJob(null)
+        return
+      }
+
+      const parsedResult = parseNumberInput(resultText)
+
+      if (parsedResult === null) {
+        setStoredValue(null)
+        setPendingOperator(null)
+        setIsWaitingForSecondValue(true)
+        setCalculationJob(null)
+        return
+      }
+
+      setStoredValue(parsedResult)
+      setPendingOperator(finishedJob.nextOperator ?? null)
+      setIsWaitingForSecondValue(true)
+      setCalculationJob(null)
+      return
+    }
+
+    setStoredValue(null)
+    setPendingOperator(null)
+    setIsWaitingForSecondValue(true)
+    setCalculationJob(null)
+  }
+
   // Rakam butonları için giriş fonksiyonu.
   // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
   const appendDigit = (digit: string) => {
@@ -198,32 +257,14 @@ function App() {
     }
 
     if (pendingOperator !== null && !isWaitingForSecondValue) {
-      const { resultText, isError } = operatorCalculators[pendingOperator](
-        storedValue,
-        currentValue,
-      )
-      setDisplayValue(resultText)
-      addToHistory(storedValue, currentValue, pendingOperator, resultText, isError)
-
-      if (isError) {
-        setStoredValue(null)
-        setPendingOperator(null)
-        setIsWaitingForSecondValue(true)
-        return
-      }
-
-      const parsedResult = parseNumberInput(resultText)
-
-      if (parsedResult === null) {
-        setStoredValue(null)
-        setPendingOperator(null)
-        setIsWaitingForSecondValue(true)
-        return
-      }
-
-      setStoredValue(parsedResult)
-      setPendingOperator(selectedOperator)
-      setIsWaitingForSecondValue(true)
+      setCalculationJob({
+        id: Date.now(),
+        first: storedValue,
+        second: currentValue,
+        operator: pendingOperator,
+        source: 'chain',
+        nextOperator: selectedOperator,
+      })
       return
     }
 
@@ -256,17 +297,13 @@ function App() {
       return
     }
 
-    const { resultText, isError } = operatorCalculators[pendingOperator](
-      storedValue,
-      secondValue,
-    )
-    setDisplayValue(resultText)
-
-    // Yeni işlemi geçmişe ekleyip sadece son 10 kaydı tutuyoruz.
-    addToHistory(storedValue, secondValue, pendingOperator, resultText, isError)
-    setStoredValue(null)
-    setPendingOperator(null)
-    setIsWaitingForSecondValue(true)
+    setCalculationJob({
+      id: Date.now(),
+      first: storedValue,
+      second: secondValue,
+      operator: pendingOperator,
+      source: 'equal',
+    })
   }
 
   // Tüm hesaplama ekranını sıfırlar.
@@ -275,6 +312,7 @@ function App() {
     setLastPressedValue('')
     setStoredValue(null)
     setPendingOperator(null)
+    setCalculationJob(null)
     setIsWaitingForSecondValue(false)
   }
 
@@ -289,6 +327,7 @@ function App() {
     setLastPressedValue(item.expression)
     setStoredValue(null)
     setPendingOperator(null)
+    setCalculationJob(null)
     setIsWaitingForSecondValue(true)
   }
 
@@ -302,6 +341,22 @@ function App() {
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
     <div className="app-layout">
+      {calculationJob && (
+        <CalculationComponent
+          jobId={calculationJob.id}
+          first={calculationJob.first}
+          second={calculationJob.second}
+          operator={calculationJob.operator}
+          onResult={(jobId, resultText, isError) => {
+            if (calculationJob.id !== jobId) {
+              return
+            }
+
+            handleCalculationResult(calculationJob, resultText, isError)
+          }}
+        />
+      )}
+
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
         <h1>Mini Hesap Makinesi</h1>
