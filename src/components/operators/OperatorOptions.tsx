@@ -1,5 +1,7 @@
 import { AdditionOperatorButton } from './AdditionOperator'
 import { DivisionOperatorButton } from './DivisionOperator'
+import { LnOperatorButton } from './LnOperator'
+import { LogOperatorButton } from './LogOperator'
 import { MultiplicationOperatorButton } from './MultiplicationOperator'
 import { PercentOperatorButton } from './PercentOperator'
 import { PermilleOperatorButton } from './PermilleOperator'
@@ -33,6 +35,8 @@ export function OperatorButtons({
         <>
           <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
           <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+          <LogOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+          <LnOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
           <PercentOperatorButton
             onSelect={onSelect}
             activeOperator={activeOperator}

@@ -1,5 +1,7 @@
 import { calculateAddition } from './AdditionOperator'
 import { calculateDivision } from './DivisionOperator'
+import { calculateLn } from './LnOperator'
+import { calculateLog } from './LogOperator'
 import { calculateMultiplication } from './MultiplicationOperator'
 import { OperatorButtons } from './OperatorOptions'
 import { calculatePercent } from './PercentOperator'
@@ -21,6 +23,8 @@ export const operatorCalculators: Record<Operator, OperationCalculator> = {
   '-': calculateSubtraction,
   '*': calculateMultiplication,
   '/': calculateDivision,
+  log: calculateLog,
+  ln: calculateLn,
   '^': calculatePower,
   '√': calculateRoot,
   '%': calculatePercent,

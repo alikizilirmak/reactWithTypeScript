@@ -27,7 +27,7 @@ type CalculationJob = {
   first: number
   second: number
   operator: Operator
-  source: 'equal' | 'chain'
+  source: 'equal' | 'chain' | 'unary'
   nextOperator?: Operator
 }
 
@@ -79,6 +79,14 @@ function App() {
     second: string,
     resultText: string,
   ): string => {
+    if (selectedOperator === 'ln') {
+      return `ln(${first}) = ${resultText}`
+    }
+
+    if (selectedOperator === 'log') {
+      return `${second} tabanında log(${first}) = ${resultText}`
+    }
+
     if (selectedOperator === '√') {
       return `${second}. dereceden kök(${first}) = ${resultText}`
     }
@@ -282,6 +290,20 @@ function App() {
       return
     }
 
+    // ln tek sayı ile çalışır, bu yüzden operatöre basınca direkt hesaplama başlatıyoruz.
+    if (selectedOperator === 'ln') {
+      setStoredValue(null)
+      setPendingOperator(null)
+      setIsWaitingForSecondValue(true)
+      queueCalculationJob({
+        first: currentValue,
+        second: 0,
+        operator: selectedOperator,
+        source: 'unary',
+      })
+      return
+    }
+
     if (storedValue === null) {
       setStoredValue(currentValue)
       setPendingOperator(selectedOperator)
@@ -381,6 +403,8 @@ function App() {
   const operatorHint =
     calculatorMode === 'basic'
       ? 'Basit mod: sadece +, -, * ve / kullanılabilir.'
+      : pendingOperator === 'log'
+        ? 'Log işleminde ikinci sayı tabandır.'
       : isDegreeOperator(pendingOperator ?? '+')
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
@@ -419,7 +443,9 @@ function App() {
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
         <h1>Mini Hesap Makinesi</h1>
-        <p className="subtitle">Toplama, çıkarma, çarpma, bölme, üs, kök, yüzde ve binde</p>
+        <p className="subtitle">
+          Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, yüzde ve binde
+        </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
         <div className="display-section">
