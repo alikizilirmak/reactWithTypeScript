@@ -10,10 +10,13 @@
 /* Hesap makinesinin kart görünümü */
 .calculator {
   width: 100%;
+  height: 520px;
   padding: 1.5rem;
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Başlık boyutu ve boşluk ayarı */
@@ -104,15 +107,52 @@
 /* Sağ panel: işlem geçmişi */
 .history {
   width: 100%;
+  height: 520px;
   padding: 1.25rem;
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .history h2 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 1.15rem;
+}
+
+.clear-history {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  background: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.clear-history:hover {
+  background: #e5e7eb;
+}
+
+.clear-history:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.history-content {
+  margin-top: 0.8rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.2rem;
 }
 
 .history ol {
@@ -137,5 +177,10 @@
 @media (max-width: 860px) {
   .app-layout {
     grid-template-columns: 1fr;
+  }
+
+  .calculator,
+  .history {
+    height: 480px;
   }
 }

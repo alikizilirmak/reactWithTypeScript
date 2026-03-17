@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
 
 // Sadece bu 4 işlem desteklensin diye bir union type tanımlıyoruz.
@@ -22,24 +22,41 @@ function App() {
   // En güncel işlem en üstte olacak.
   const [history, setHistory] = useState<string[]>([])
 
-  // Input değerlerini Number'a çeviriyoruz.
-  // useMemo kullanmamızın nedeni: firstValue / secondValue değişmediği sürece
-  // aynı dönüşüm sonucunu tekrar üretmemek.
-  const parsedValues = useMemo(
-    () => ({
-      first: Number(firstValue),
-      second: Number(secondValue),
-    }),
-    [firstValue, secondValue],
-  )
+  // Input'a yazılırken sadece sayıya uygun karakterlere izin veriyoruz.
+  // Böylece "e" gibi değerler daha giriş aşamasında engellenir.
+  const updateNumberInput = (
+    rawValue: string,
+    setValue: (nextValue: string) => void,
+  ) => {
+    const normalizedValue = rawValue.replace(',', '.')
+    const isValidPartialNumber = /^-?\d*(\.\d*)?$/.test(normalizedValue)
+
+    if (isValidPartialNumber) {
+      setValue(normalizedValue)
+    }
+  }
+
+  // Hesaplama anında değerin gerçekten geçerli sayı olup olmadığını kesin kontrol ediyoruz.
+  const parseNumberInput = (rawValue: string): number | null => {
+    const trimmedValue = rawValue.trim()
+    const isValidNumber = /^-?(?:\d+\.?\d*|\.\d+)$/.test(trimmedValue)
+
+    if (!isValidNumber) {
+      return null
+    }
+
+    const parsedValue = Number(trimmedValue)
+    return Number.isFinite(parsedValue) ? parsedValue : null
+  }
 
   // Hesapla butonuna basılınca çalışacak fonksiyon.
   const calculate = () => {
-    const { first, second } = parsedValues
+    const first = parseNumberInput(firstValue)
+    const second = parseNumberInput(secondValue)
 
     // Geçersiz sayı kontrolü (ör. kullanıcı beklenmedik bir değer girdiyse).
-    if (Number.isNaN(first) || Number.isNaN(second)) {
-      setResult('Lütfen geçerli bir sayı girin.')
+    if (first === null || second === null) {
+      setResult('Lütfen geçerli sayılar girin.')
       return
     }
 
@@ -101,6 +118,11 @@ function App() {
     setResult('0')
   }
 
+  // Sadece geçmiş kayıtlarını temizlemek için ayrı bir fonksiyon.
+  const clearHistory = () => {
+    setHistory([])
+  }
+
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
     <div className="app-layout">
@@ -112,11 +134,14 @@ function App() {
         {/* İlk sayı, işlem ve ikinci sayı alanlarını tek satırda topluyoruz. */}
         <div className="inputs">
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="1. sayı"
             value={firstValue}
             // Input değişince state'i güncelliyoruz (controlled input yapısı).
-            onChange={(event) => setFirstValue(event.target.value)}
+            onChange={(event) =>
+              updateNumberInput(event.target.value, setFirstValue)
+            }
           />
           <select
             aria-label="İşlem seç"
@@ -130,11 +155,14 @@ function App() {
             <option value="/">/</option>
           </select>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             placeholder="2. sayı"
             value={secondValue}
             // İkinci sayı değeri değiştikçe state güncellenir.
-            onChange={(event) => setSecondValue(event.target.value)}
+            onChange={(event) =>
+              updateNumberInput(event.target.value, setSecondValue)
+            }
           />
         </div>
 
@@ -159,17 +187,29 @@ function App() {
 
       {/* Sağdaki ayrı div: son 10 işlemin tarihçesi */}
       <aside className="history" aria-label="İşlem geçmişi">
-        <h2>İşlem Geçmişi</h2>
+        <div className="history-header">
+          <h2>İşlem Geçmişi</h2>
+          <button
+            type="button"
+            className="clear-history"
+            onClick={clearHistory}
+            disabled={history.length === 0}
+          >
+            Tümünü Temizle
+          </button>
+        </div>
 
-        {history.length === 0 ? (
-          <p className="empty-history">Henüz işlem yapılmadı.</p>
-        ) : (
-          <ol>
-            {history.map((item, index) => (
-              <li key={`${item}-${index}`}>{item}</li>
-            ))}
-          </ol>
-        )}
+        <div className="history-content">
+          {history.length === 0 ? (
+            <p className="empty-history">Henüz işlem yapılmadı.</p>
+          ) : (
+            <ol>
+              {history.map((item, index) => (
+                <li key={`${item}-${index}`}>{item}</li>
+              ))}
+            </ol>
+          )}
+        </div>
       </aside>
     </div>
   )
