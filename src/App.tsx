@@ -23,6 +23,7 @@ function App() {
   // React'teki "useState" bir Hook'tur.
   // Hook: component içinde veriyi (state) saklamamızı sağlar.
   const [displayValue, setDisplayValue] = useState<string>('0')
+  const [lastPressedValue, setLastPressedValue] = useState<string>('')
   const [storedValue, setStoredValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
@@ -126,28 +127,35 @@ function App() {
   const appendDigit = (digit: string) => {
     if (isWaitingForSecondValue || parseNumberInput(displayValue) === null) {
       setDisplayValue(digit)
+      setLastPressedValue(digit)
       setIsWaitingForSecondValue(false)
       return
     }
 
     if (displayValue === '0') {
       setDisplayValue(digit)
+      setLastPressedValue(digit)
       return
     }
 
-    setDisplayValue((previousValue) => previousValue + digit)
+    const nextValue = `${displayValue}${digit}`
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
   }
 
   // Ondalık nokta ekleme işlemi.
   const appendDecimal = () => {
     if (isWaitingForSecondValue || parseNumberInput(displayValue) === null) {
       setDisplayValue('0.')
+      setLastPressedValue('0.')
       setIsWaitingForSecondValue(false)
       return
     }
 
     if (!displayValue.includes('.')) {
-      setDisplayValue((previousValue) => previousValue + '.')
+      const nextValue = `${displayValue}.`
+      setDisplayValue(nextValue)
+      setLastPressedValue(nextValue)
     }
   }
 
@@ -160,16 +168,21 @@ function App() {
     }
 
     if (displayValue.startsWith('-')) {
-      setDisplayValue(displayValue.slice(1))
+      const nextValue = displayValue.slice(1)
+      setDisplayValue(nextValue)
+      setLastPressedValue(nextValue)
       return
     }
 
-    setDisplayValue(`-${displayValue}`)
+    const nextValue = `-${displayValue}`
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
   }
 
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
+    setLastPressedValue(selectedOperator)
     const currentValue = parseNumberInput(displayValue)
 
     if (currentValue === null) {
@@ -220,6 +233,7 @@ function App() {
 
   // "=" butonu: bekleyen işlemi çalıştırır.
   const handleEqual = () => {
+    setLastPressedValue('=')
     if (pendingOperator === null || storedValue === null) {
       return
     }
@@ -258,6 +272,7 @@ function App() {
   // Tüm hesaplama ekranını sıfırlar.
   const clearAll = () => {
     setDisplayValue('0')
+    setLastPressedValue('C')
     setStoredValue(null)
     setPendingOperator(null)
     setIsWaitingForSecondValue(false)
@@ -271,6 +286,7 @@ function App() {
   // Geçmişten bir satıra tıklanınca ilgili verileri tekrar forma yüklüyoruz.
   const applyHistoryItem = (item: HistoryItem) => {
     setDisplayValue(item.result)
+    setLastPressedValue(item.expression)
     setStoredValue(null)
     setPendingOperator(null)
     setIsWaitingForSecondValue(true)
@@ -291,16 +307,13 @@ function App() {
         <h1>Mini Hesap Makinesi</h1>
         <p className="subtitle">Toplama, çıkarma, çarpma, bölme, üs, kök, yüzde ve binde</p>
 
-        {/* Tek bir input alanı: hem giriş hem sonuç burada gösteriliyor. */}
+        {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
         <div className="display-section">
-          <label htmlFor="calculator-display">Ekran</label>
-          <input
-            id="calculator-display"
-            type="text"
-            className="display-input"
-            value={displayValue}
-            readOnly
-          />
+          <span className="display-label">Ekran (5 satır)</span>
+          <div className="display-board" role="status" aria-live="polite">
+            <span className="last-pressed">{lastPressedValue || '\u00A0'}</span>
+            <span className="display-value">{displayValue}</span>
+          </div>
           <p className="input-hint">{operatorHint}</p>
         </div>
 
