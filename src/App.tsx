@@ -57,11 +57,17 @@ function App() {
     return Number.isFinite(parsedValue) ? parsedValue : null
   }
 
+  // Geçmişte görünürken boş değerleri daha anlaşılır göstermek için yardımcı fonksiyon.
+  const toDisplayValue = (rawValue: string): string => {
+    const trimmedValue = rawValue.trim()
+    return trimmedValue === '' ? 'boş' : trimmedValue
+  }
+
   // Geçmişte görünecek ifade metnini tek noktadan üretmek okunabilirliği artırır.
   const buildExpression = (
-    first: number,
+    first: string,
     selectedOperator: Operator,
-    second: number,
+    second: string,
     resultText: string,
   ): string => {
     if (selectedOperator === '√') {
@@ -71,22 +77,45 @@ function App() {
     return `${first} ${selectedOperator} ${second} = ${resultText}`
   }
 
-  // Geçmiş kaydı ekleme işini yardımcı bir fonksiyona alıyoruz.
+  // Verilen değerlerle geçmiş kaydı oluşturuyoruz.
+  const addToHistoryByValues = (
+    first: string,
+    second: string,
+    selectedOperator: Operator,
+    resultText: string,
+  ) => {
+    const displayFirst = toDisplayValue(first)
+    const displaySecond = toDisplayValue(second)
+
+    const historyItem: HistoryItem = {
+      firstValue: first,
+      secondValue: second,
+      operator: selectedOperator,
+      result: resultText,
+      expression: buildExpression(
+        displayFirst,
+        selectedOperator,
+        displaySecond,
+        resultText,
+      ),
+    }
+
+    setHistory((previousHistory) => [historyItem, ...previousHistory].slice(0, 10))
+  }
+
+  // Sayısal senaryolarda helper: number değerleri string'e çevirip history'e ekler.
   const addToHistory = (
     first: number,
     second: number,
     selectedOperator: Operator,
     resultText: string,
   ) => {
-    const historyItem: HistoryItem = {
-      firstValue: first.toString(),
-      secondValue: second.toString(),
-      operator: selectedOperator,
-      result: resultText,
-      expression: buildExpression(first, selectedOperator, second, resultText),
-    }
-
-    setHistory((previousHistory) => [historyItem, ...previousHistory].slice(0, 10))
+    addToHistoryByValues(
+      first.toString(),
+      second.toString(),
+      selectedOperator,
+      resultText,
+    )
   }
 
   // Hesapla butonuna basılınca çalışacak fonksiyon.
@@ -96,7 +125,9 @@ function App() {
 
     // Geçersiz sayı kontrolü (ör. kullanıcı beklenmedik bir değer girdiyse).
     if (first === null || second === null) {
-      setResult('Lütfen geçerli sayılar girin.')
+      const errorResult = 'Lütfen geçerli sayılar girin.'
+      setResult(errorResult)
+      addToHistoryByValues(firstValue, secondValue, operator, errorResult)
       return
     }
 
