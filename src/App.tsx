@@ -140,6 +140,7 @@ function App() {
     resultText: string,
     isError: boolean,
   ) => {
+    // ResultText'i her durumda ekrana basıyoruz (hata mesajı da olabilir).
     setDisplayValue(resultText)
     addToHistory(
       finishedJob.first,
@@ -150,6 +151,8 @@ function App() {
     )
 
     if (finishedJob.source === 'chain') {
+      // "chain" = kullanıcı bir operatöre basarak yeni işlemi zincirli başlatıyor.
+      // Örn: 5 + 2 + ... gibi.
       if (isError) {
         setStoredValue(null)
         setPendingOperator(null)
@@ -175,6 +178,7 @@ function App() {
       return
     }
 
+    // "equal" akışında iş tamamlandığı için bekleyen operatörü sıfırlıyoruz.
     setStoredValue(null)
     setPendingOperator(null)
     setIsWaitingForSecondValue(true)
@@ -257,6 +261,8 @@ function App() {
     }
 
     if (pendingOperator !== null && !isWaitingForSecondValue) {
+      // Burada hesaplamayı direkt yapmıyoruz.
+      // Hesaplama işini CalculationComponent'e devretmek için job oluşturuyoruz.
       setCalculationJob({
         id: Date.now(),
         first: storedValue,
@@ -342,6 +348,8 @@ function App() {
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
     <div className="app-layout">
       {calculationJob && (
+        // calculationJob varsa renderless hesaplama component'i çalışır.
+        // Sonucu onResult callback'i ile tekrar App state'ine taşır.
         <CalculationComponent
           jobId={calculationJob.id}
           first={calculationJob.first}

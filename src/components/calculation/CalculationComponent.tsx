@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { operatorCalculators, type Operator } from '../operators'
 
+// Props: Parent component'ten bu component'e geçen verilerdir.
+// CalculationComponent ekrana bir şey çizmez, sadece verilen job'ı hesaplar.
 type CalculationComponentProps = {
   jobId: number
   first: number
@@ -18,10 +20,13 @@ export function CalculationComponent({
   operator,
   onResult,
 }: CalculationComponentProps) {
+  // useEffect: React'te bir "yan etki" (side-effect) çalıştırmak için kullanılır.
+  // Burada operator/first/second değişince hesaplamayı tetikleyip sonucu parent'a iletiyoruz.
   useEffect(() => {
     const { resultText, isError } = operatorCalculators[operator](first, second)
     onResult(jobId, resultText, isError)
   }, [jobId, first, second, operator, onResult])
 
+  // UI yok: Bu component'in görevi sadece hesaplayıp callback çağırmak.
   return null
 }
