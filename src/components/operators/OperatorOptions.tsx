@@ -8,13 +8,10 @@ import { RootOperatorButton } from './RootOperator'
 import { SubtractionOperatorButton } from './SubtractionOperator'
 import type { OperatorButtonProps } from './types'
 
-// Temel 4 işlem butonları (+ - * /)
-export function BasicOperatorButtons({
-  onSelect,
-  activeOperator,
-}: OperatorButtonProps) {
+export function OperatorButtons({ onSelect, activeOperator }: OperatorButtonProps) {
   return (
     <>
+      {/* Butonların her biri kendi operatör component'inden geliyor. */}
       <AdditionOperatorButton
         onSelect={onSelect}
         activeOperator={activeOperator}
@@ -28,17 +25,6 @@ export function BasicOperatorButtons({
         activeOperator={activeOperator}
       />
       <DivisionOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-    </>
-  )
-}
-
-// Gelişmiş operatör butonları (^ √ % ‰)
-export function AdvancedOperatorButtons({
-  onSelect,
-  activeOperator,
-}: OperatorButtonProps) {
-  return (
-    <>
       <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <PercentOperatorButton onSelect={onSelect} activeOperator={activeOperator} />

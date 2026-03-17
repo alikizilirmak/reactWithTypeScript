@@ -15,7 +15,7 @@
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   row-gap: 0.55rem;
   min-height: 0;
 }
@@ -105,8 +105,7 @@
 
 .operator-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(34px, auto);
-  align-content: start;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 .number-pad button,
@@ -122,12 +121,6 @@
   height: 100%;
 }
 
-.basic-operators-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
 .number-pad button:hover,
 .operator-button:hover {
   background: #f3f4f6;
@@ -141,8 +134,8 @@
 
 .actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
 }
 
 .actions button {
@@ -176,10 +169,6 @@
 
 .actions .secondary:hover {
   background: #d1d5db;
-}
-
-.span-two {
-  grid-column: span 2;
 }
 
 /* Sağ panel: işlem geçmişi */

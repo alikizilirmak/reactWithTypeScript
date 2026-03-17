@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import './App.css'
 import {
-  AdvancedOperatorButtons,
-  BasicOperatorButtons,
   isDegreeOperator,
   isRatioOperator,
+  OperatorButtons,
   operatorCalculators,
   type Operator,
 } from './components/operators'
@@ -318,7 +317,7 @@ function App() {
           <p className="input-hint">{operatorHint}</p>
         </div>
 
-        {/* Sol blok sayısal tuşlar, sağ blok gelişmiş operatör tuşları */}
+        {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
         <div className="keypad-layout">
           <div className="number-pad">
             <button type="button" onClick={() => appendDigit('7')}>
@@ -360,30 +359,18 @@ function App() {
           </div>
 
           <div className="operator-pad">
-            <AdvancedOperatorButtons
+            <OperatorButtons
               onSelect={handleOperatorSelect}
               activeOperator={pendingOperator}
             />
           </div>
         </div>
 
-        {/* Temel 4 işlem butonlarını alt satıra alıyoruz. */}
-        <div className="basic-operators-row">
-          <BasicOperatorButtons
-            onSelect={handleOperatorSelect}
-            activeOperator={pendingOperator}
-          />
-        </div>
-
         <div className="actions">
-          <button
-            type="button"
-            className="equal span-two"
-            onClick={handleEqual}
-          >
+          <button type="button" className="equal" onClick={handleEqual}>
             =
           </button>
-          <button type="button" className="secondary span-two" onClick={clearAll}>
+          <button type="button" className="secondary" onClick={clearAll}>
             Temizle
           </button>
         </div>
