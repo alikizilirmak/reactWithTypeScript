@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import './App.css'
 import { CalculationComponent } from './components/calculation/CalculationComponent'
 import {
@@ -44,6 +44,8 @@ function App() {
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('scientific')
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
+  const calculationSequenceRef = useRef<number>(0)
+  const handledJobIdsRef = useRef<Set<number>>(new Set())
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
@@ -136,6 +138,24 @@ function App() {
       resultText,
       isError,
     )
+  }
+
+  // Hesaplama job'ı oluştururken benzersiz id veriyoruz.
+  // useRef ile tuttuğumuz sayaç, render'lar arasında değerini korur.
+  const queueCalculationJob = (job: Omit<CalculationJob, 'id'>) => {
+    calculationSequenceRef.current += 1
+    const nextId = calculationSequenceRef.current
+
+    // Çok uzun kullanımda set'in sınırsız büyümemesi için ara sıra temizliyoruz.
+    if (handledJobIdsRef.current.size > 200) {
+      handledJobIdsRef.current.clear()
+    }
+
+    handledJobIdsRef.current.delete(nextId)
+    setCalculationJob({
+      id: nextId,
+      ...job,
+    })
   }
 
   // Hesaplama component'i sonucu döndüğünde bu fonksiyon çalışır.
@@ -272,8 +292,7 @@ function App() {
     if (pendingOperator !== null && !isWaitingForSecondValue) {
       // Burada hesaplamayı direkt yapmıyoruz.
       // Hesaplama işini CalculationComponent'e devretmek için job oluşturuyoruz.
-      setCalculationJob({
-        id: Date.now(),
+      queueCalculationJob({
         first: storedValue,
         second: currentValue,
         operator: pendingOperator,
@@ -312,8 +331,7 @@ function App() {
       return
     }
 
-    setCalculationJob({
-      id: Date.now(),
+    queueCalculationJob({
       first: storedValue,
       second: secondValue,
       operator: pendingOperator,
@@ -384,6 +402,14 @@ function App() {
             if (calculationJob.id !== jobId) {
               return
             }
+
+            // React StrictMode'da effect iki kez çalışabildiği için
+            // aynı job id'den gelen ikinci sonucu yoksayıyoruz.
+            if (handledJobIdsRef.current.has(jobId)) {
+              return
+            }
+
+            handledJobIdsRef.current.add(jobId)
 
             handleCalculationResult(calculationJob, resultText, isError)
           }}
