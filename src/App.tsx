@@ -272,7 +272,7 @@ function App() {
   // Tüm hesaplama ekranını sıfırlar.
   const clearAll = () => {
     setDisplayValue('0')
-    setLastPressedValue('C')
+    setLastPressedValue('')
     setStoredValue(null)
     setPendingOperator(null)
     setIsWaitingForSecondValue(false)
