@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import { CalculationComponent } from './components/calculation/CalculationComponent'
 import {
+  isBasicOperator,
   isDegreeOperator,
   isRatioOperator,
   OperatorButtons,
@@ -30,6 +31,8 @@ type CalculationJob = {
   nextOperator?: Operator
 }
 
+type CalculatorMode = 'basic' | 'scientific'
+
 function App() {
   // React'teki "useState" bir Hook'tur.
   // Hook: component içinde veriyi (state) saklamamızı sağlar.
@@ -38,6 +41,7 @@ function App() {
   const [storedValue, setStoredValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
+  const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('scientific')
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
 
@@ -245,6 +249,11 @@ function App() {
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
+    // Basit modda güvenlik kontrolü: 4 işlem dışındaki operatörleri işleme alma.
+    if (calculatorMode === 'basic' && !isBasicOperator(selectedOperator)) {
+      return
+    }
+
     setLastPressedValue(selectedOperator)
     const currentValue = parseNumberInput(displayValue)
 
@@ -322,6 +331,19 @@ function App() {
     setIsWaitingForSecondValue(false)
   }
 
+  // Mod değişimi: basit / bilimsel.
+  // Basit moda geçerken bilimsel bir operatör seçiliyse bekleyen işlemi temizliyoruz.
+  const handleModeChange = (nextMode: CalculatorMode) => {
+    setCalculatorMode(nextMode)
+
+    if (nextMode === 'basic' && pendingOperator && !isBasicOperator(pendingOperator)) {
+      setPendingOperator(null)
+      setStoredValue(null)
+      setCalculationJob(null)
+      setIsWaitingForSecondValue(false)
+    }
+  }
+
   // Sadece geçmiş kayıtlarını temizlemek için ayrı bir fonksiyon.
   const clearHistory = () => {
     setHistory([])
@@ -338,11 +360,14 @@ function App() {
   }
 
   // UI'da kullanıcıya hangi ikinci değerin beklendiğini anlatan kısa metin.
-  const operatorHint = isDegreeOperator(pendingOperator ?? '+')
-    ? 'Seçili işlem derece bekliyor.'
-    : isRatioOperator(pendingOperator ?? '+')
-      ? 'Seçili işlem oran bekliyor.'
-      : 'Rakam girip bir operatör seçebilirsin.'
+  const operatorHint =
+    calculatorMode === 'basic'
+      ? 'Basit mod: sadece +, -, * ve / kullanılabilir.'
+      : isDegreeOperator(pendingOperator ?? '+')
+        ? 'Seçili işlem derece bekliyor.'
+        : isRatioOperator(pendingOperator ?? '+')
+          ? 'Seçili işlem oran bekliyor.'
+          : 'Rakam girip bir operatör seçebilirsin.'
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
@@ -378,6 +403,24 @@ function App() {
             <span className="display-value">{displayValue}</span>
           </div>
           <p className="input-hint">{operatorHint}</p>
+        </div>
+
+        {/* Ekranın altındaki mod seçimi butonları */}
+        <div className="mode-switch" role="group" aria-label="Hesap makinesi modu">
+          <button
+            type="button"
+            className={`mode-button ${calculatorMode === 'basic' ? 'active' : ''}`}
+            onClick={() => handleModeChange('basic')}
+          >
+            Basit Hesap Makinesi
+          </button>
+          <button
+            type="button"
+            className={`mode-button ${calculatorMode === 'scientific' ? 'active' : ''}`}
+            onClick={() => handleModeChange('scientific')}
+          >
+            Bilimsel Hesap Makinesi
+          </button>
         </div>
 
         {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
@@ -425,6 +468,7 @@ function App() {
             <OperatorButtons
               onSelect={handleOperatorSelect}
               activeOperator={pendingOperator}
+              showScientific={calculatorMode === 'scientific'}
             />
           </div>
         </div>

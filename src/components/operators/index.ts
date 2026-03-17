@@ -27,6 +27,12 @@ export const operatorCalculators: Record<Operator, OperationCalculator> = {
   '‰': calculatePermille,
 }
 
+// Basit hesap makinesi modunda görünmesini istediğimiz 4 temel operatör.
+export const basicOperators: Operator[] = ['+', '-', '*', '/']
+
+export const isBasicOperator = (operator: Operator): boolean =>
+  basicOperators.includes(operator)
+
 // Bazı UI davranışlarını (placeholder/hint) operatör grubuna göre değiştirmek için
 // küçük yardımcı fonksiyonlar kullanıyoruz.
 export const isDegreeOperator = (operator: Operator): boolean =>

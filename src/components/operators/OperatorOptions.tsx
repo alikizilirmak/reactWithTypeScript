@@ -8,7 +8,11 @@ import { RootOperatorButton } from './RootOperator'
 import { SubtractionOperatorButton } from './SubtractionOperator'
 import type { OperatorButtonProps } from './types'
 
-export function OperatorButtons({ onSelect, activeOperator }: OperatorButtonProps) {
+export function OperatorButtons({
+  onSelect,
+  activeOperator,
+  showScientific = true,
+}: OperatorButtonProps) {
   return (
     <>
       {/* Butonların her biri kendi operatör component'inden geliyor. */}
@@ -25,10 +29,20 @@ export function OperatorButtons({ onSelect, activeOperator }: OperatorButtonProp
         activeOperator={activeOperator}
       />
       <DivisionOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-      <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-      <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-      <PercentOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-      <PermilleOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      {showScientific && (
+        <>
+          <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+          <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+          <PercentOperatorButton
+            onSelect={onSelect}
+            activeOperator={activeOperator}
+          />
+          <PermilleOperatorButton
+            onSelect={onSelect}
+            activeOperator={activeOperator}
+          />
+        </>
+      )}
     </>
   )
 }
