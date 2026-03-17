@@ -1,21 +1,21 @@
 /* Hesap makinesi + tarihçe panosunu yatayda yan yana gösteriyoruz */
 .app-layout {
-  width: min(980px, 96vw);
+  width: min(1080px, 96vw);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 1rem;
   align-items: start;
 }
 
 .calculator {
   width: 100%;
-  height: 560px;
+  height: 640px;
   padding: 1.25rem;
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto minmax(220px, 1fr) auto;
   row-gap: 0.55rem;
   min-height: 0;
 }
@@ -208,7 +208,7 @@
 /* Sağ panel: işlem geçmişi */
 .history {
   width: 100%;
-  height: 560px;
+  height: 640px;
   padding: 1.25rem;
   border-radius: 1rem;
   background: #ffffff;
@@ -316,6 +316,6 @@
 
   .calculator,
   .history {
-    height: 560px;
+    height: 620px;
   }
 }

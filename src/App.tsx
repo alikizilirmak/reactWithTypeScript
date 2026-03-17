@@ -442,7 +442,7 @@ function App() {
 
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
-        <h1>Mini Hesap Makinesi</h1>
+        <h1>Hesap Makinesi</h1>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, yüzde ve binde
         </p>
