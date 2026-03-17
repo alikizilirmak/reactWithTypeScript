@@ -464,7 +464,7 @@ function App() {
             </button>
           </div>
 
-          <div className="operator-pad">
+          <div className={`operator-pad ${calculatorMode}`}>
             <OperatorButtons
               onSelect={handleOperatorSelect}
               activeOperator={pendingOperator}
