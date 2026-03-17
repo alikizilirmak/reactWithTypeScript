@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için yüzde operatörü seçeneği.
-export function PercentOperatorOption() {
-  return <option value="%">%</option>
+// "%" operatör butonu.
+export function PercentOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '%' ? 'active' : ''}`}
+      onClick={() => onSelect('%')}
+    >
+      %
+    </button>
+  )
 }
 
 // first sayısının second yüzdesini hesaplar.

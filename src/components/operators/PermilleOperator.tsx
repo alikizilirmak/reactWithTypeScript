@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için binde operatörü seçeneği.
-export function PermilleOperatorOption() {
-  return <option value="‰">‰</option>
+// "‰" operatör butonu.
+export function PermilleOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '‰' ? 'active' : ''}`}
+      onClick={() => onSelect('‰')}
+    >
+      ‰
+    </button>
+  )
 }
 
 // first sayısının second bindesini hesaplar.

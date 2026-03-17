@@ -16,3 +16,10 @@ export type OperationCalculator = (
   first: number,
   second: number,
 ) => OperationResult
+
+// Her operatör button component'i bu props ile çalışır.
+// activeOperator sayesinde hangi operatörün seçili olduğunu görselde vurgulayabiliyoruz.
+export type OperatorButtonProps = {
+  onSelect: (operator: Operator) => void
+  activeOperator: Operator | null
+}

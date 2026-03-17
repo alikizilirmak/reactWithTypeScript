@@ -3,12 +3,13 @@ import './App.css'
 import {
   isDegreeOperator,
   isRatioOperator,
-  OperatorOptions,
+  OperatorButtons,
   operatorCalculators,
   type Operator,
 } from './components/operators'
 
-// Geçmiş kaydında hem hesaplanan metni hem de UI davranışı için gereken alanları tutuyoruz.
+// TypeScript'teki "type" anahtar kelimesi ile veri şekillerini tanımlarız.
+// Burada geçmiş listesindeki her satırın hangi alanlara sahip olacağını sabitliyoruz.
 type HistoryItem = {
   firstValue: string
   secondValue: string
@@ -19,37 +20,20 @@ type HistoryItem = {
 }
 
 function App() {
-  // Input alanlarından gelen değerleri string olarak tutuyoruz.
-  // Çünkü HTML input'lar değeri her zaman string döndürür.
-  const [firstValue, setFirstValue] = useState<string>('')
-  const [secondValue, setSecondValue] = useState<string>('')
-
-  // Varsayılan işlem toplama olsun.
-  const [operator, setOperator] = useState<Operator>('+')
-
-  // Hesaplanan sonucu ekranda göstermek için state.
-  // Başlangıçta "0" gösteriyoruz.
-  const [result, setResult] = useState<string>('0')
+  // React'teki "useState" bir Hook'tur.
+  // Hook: component içinde veriyi (state) saklamamızı sağlar.
+  const [displayValue, setDisplayValue] = useState<string>('0')
+  const [storedValue, setStoredValue] = useState<number | null>(null)
+  const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
+  const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
+    useState<boolean>(false)
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
   const [history, setHistory] = useState<HistoryItem[]>([])
 
-  // Input'a yazılırken sadece sayıya uygun karakterlere izin veriyoruz.
-  // Böylece "e" gibi değerler daha giriş aşamasında engellenir.
-  const updateNumberInput = (
-    rawValue: string,
-    setValue: (nextValue: string) => void,
-  ) => {
-    const normalizedValue = rawValue.replace(',', '.')
-    const isValidPartialNumber = /^-?\d*(\.\d*)?$/.test(normalizedValue)
-
-    if (isValidPartialNumber) {
-      setValue(normalizedValue)
-    }
-  }
-
-  // Hesaplama anında değerin gerçekten geçerli sayı olup olmadığını kesin kontrol ediyoruz.
+  // "null" değeri burada "henüz geçerli bir sayı yok" anlamında kullanılıyor.
+  // Regex + Number kontrolü ile güvenli parse yapıyoruz.
   const parseNumberInput = (rawValue: string): number | null => {
     const trimmedValue = rawValue.trim()
     const isValidNumber = /^-?(?:\d+\.?\d*|\.\d+)$/.test(trimmedValue)
@@ -68,7 +52,8 @@ function App() {
     return trimmedValue === '' ? 'boş' : trimmedValue
   }
 
-  // Geçmişte görünecek ifade metnini tek noktadan üretmek okunabilirliği artırır.
+  // Bu fonksiyon geçmişte gözüken işlem metnini üretir.
+  // Farklı operatörlerde daha anlaşılır ifade formatı seçiyoruz.
   const buildExpression = (
     first: string,
     selectedOperator: Operator,
@@ -90,7 +75,8 @@ function App() {
     return `${first} ${selectedOperator} ${second} = ${resultText}`
   }
 
-  // Verilen değerlerle geçmiş kaydı oluşturuyoruz.
+  // Geçmişe kayıt ekleme işi tek yerde dursun diye helper kullandık.
+  // Bu yaklaşım kod tekrarını azaltır.
   const addToHistoryByValues = (
     first: string,
     second: string,
@@ -135,36 +121,146 @@ function App() {
     )
   }
 
-  // Hesapla butonuna basılınca çalışacak fonksiyon.
-  const calculate = () => {
-    const first = parseNumberInput(firstValue)
-    const second = parseNumberInput(secondValue)
-
-    // Geçersiz sayı kontrolü (ör. kullanıcı beklenmedik bir değer girdiyse).
-    if (first === null || second === null) {
-      const errorResult = 'Lütfen geçerli sayılar girin.'
-      setResult(errorResult)
-      addToHistoryByValues(firstValue, secondValue, operator, errorResult, true)
+  // Rakam butonları için giriş fonksiyonu.
+  // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
+  const appendDigit = (digit: string) => {
+    if (isWaitingForSecondValue || parseNumberInput(displayValue) === null) {
+      setDisplayValue(digit)
+      setIsWaitingForSecondValue(false)
       return
     }
 
-    // Modüler yapı: App burada "nasıl hesaplanır" detayını bilmez.
-    // Seçilen operatörün kendi dosyasındaki hesaplayıcıyı merkezi kayıt tablosundan çağırır.
-    const { resultText, isError } = operatorCalculators[operator](first, second)
-    setResult(resultText)
+    if (displayValue === '0') {
+      setDisplayValue(digit)
+      return
+    }
 
-    // Yeni işlemi geçmişe ekleyip sadece son 10 kaydı tutuyoruz.
-    addToHistory(first, second, operator, resultText, isError)
+    setDisplayValue((previousValue) => previousValue + digit)
   }
 
-  // Formu başlangıç haline döndürmek için ayrı bir fonksiyon yazıyoruz.
-  // Bu yaklaşım, "tek sorumluluk" prensibi açısından daha temizdir:
-  // calculate sadece hesaplar, clearValues sadece temizler.
-  const clearValues = () => {
-    setFirstValue('')
-    setSecondValue('')
-    setOperator('+')
-    setResult('0')
+  // Ondalık nokta ekleme işlemi.
+  const appendDecimal = () => {
+    if (isWaitingForSecondValue || parseNumberInput(displayValue) === null) {
+      setDisplayValue('0.')
+      setIsWaitingForSecondValue(false)
+      return
+    }
+
+    if (!displayValue.includes('.')) {
+      setDisplayValue((previousValue) => previousValue + '.')
+    }
+  }
+
+  // Pozitif/negatif işaretini çevirir (±).
+  const toggleSign = () => {
+    const parsedValue = parseNumberInput(displayValue)
+
+    if (parsedValue === null || parsedValue === 0) {
+      return
+    }
+
+    if (displayValue.startsWith('-')) {
+      setDisplayValue(displayValue.slice(1))
+      return
+    }
+
+    setDisplayValue(`-${displayValue}`)
+  }
+
+  // Operatör butonuna basıldığında çalışır.
+  // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
+  const handleOperatorSelect = (selectedOperator: Operator) => {
+    const currentValue = parseNumberInput(displayValue)
+
+    if (currentValue === null) {
+      setDisplayValue('Lütfen önce geçerli bir sayı girin.')
+      return
+    }
+
+    if (storedValue === null) {
+      setStoredValue(currentValue)
+      setPendingOperator(selectedOperator)
+      setIsWaitingForSecondValue(true)
+      return
+    }
+
+    if (pendingOperator !== null && !isWaitingForSecondValue) {
+      const { resultText, isError } = operatorCalculators[pendingOperator](
+        storedValue,
+        currentValue,
+      )
+      setDisplayValue(resultText)
+      addToHistory(storedValue, currentValue, pendingOperator, resultText, isError)
+
+      if (isError) {
+        setStoredValue(null)
+        setPendingOperator(null)
+        setIsWaitingForSecondValue(true)
+        return
+      }
+
+      const parsedResult = parseNumberInput(resultText)
+
+      if (parsedResult === null) {
+        setStoredValue(null)
+        setPendingOperator(null)
+        setIsWaitingForSecondValue(true)
+        return
+      }
+
+      setStoredValue(parsedResult)
+      setPendingOperator(selectedOperator)
+      setIsWaitingForSecondValue(true)
+      return
+    }
+
+    setPendingOperator(selectedOperator)
+    setIsWaitingForSecondValue(true)
+  }
+
+  // "=" butonu: bekleyen işlemi çalıştırır.
+  const handleEqual = () => {
+    if (pendingOperator === null || storedValue === null) {
+      return
+    }
+
+    const secondValue = parseNumberInput(displayValue)
+
+    if (secondValue === null) {
+      const errorResult = 'Lütfen geçerli sayılar girin.'
+      setDisplayValue(errorResult)
+      addToHistoryByValues(
+        storedValue.toString(),
+        displayValue,
+        pendingOperator,
+        errorResult,
+        true,
+      )
+      setStoredValue(null)
+      setPendingOperator(null)
+      setIsWaitingForSecondValue(true)
+      return
+    }
+
+    const { resultText, isError } = operatorCalculators[pendingOperator](
+      storedValue,
+      secondValue,
+    )
+    setDisplayValue(resultText)
+
+    // Yeni işlemi geçmişe ekleyip sadece son 10 kaydı tutuyoruz.
+    addToHistory(storedValue, secondValue, pendingOperator, resultText, isError)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setIsWaitingForSecondValue(true)
+  }
+
+  // Tüm hesaplama ekranını sıfırlar.
+  const clearAll = () => {
+    setDisplayValue('0')
+    setStoredValue(null)
+    setPendingOperator(null)
+    setIsWaitingForSecondValue(false)
   }
 
   // Sadece geçmiş kayıtlarını temizlemek için ayrı bir fonksiyon.
@@ -174,18 +270,18 @@ function App() {
 
   // Geçmişten bir satıra tıklanınca ilgili verileri tekrar forma yüklüyoruz.
   const applyHistoryItem = (item: HistoryItem) => {
-    setFirstValue(item.firstValue)
-    setSecondValue(item.secondValue)
-    setOperator(item.operator)
-    setResult(item.result)
+    setDisplayValue(item.result)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setIsWaitingForSecondValue(true)
   }
 
-  // Placeholder metnini operatör tipine göre değiştiriyoruz.
-  const secondInputPlaceholder = isDegreeOperator(operator)
-    ? 'derece'
-    : isRatioOperator(operator)
-      ? 'oran'
-      : '2. sayı'
+  // UI'da kullanıcıya hangi ikinci değerin beklendiğini anlatan kısa metin.
+  const operatorHint = isDegreeOperator(pendingOperator ?? '+')
+    ? 'Seçili işlem derece bekliyor.'
+    : isRatioOperator(pendingOperator ?? '+')
+      ? 'Seçili işlem oran bekliyor.'
+      : 'Rakam girip bir operatör seçebilirsin.'
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
@@ -193,64 +289,77 @@ function App() {
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
         <h1>Mini Hesap Makinesi</h1>
-        <p>Toplama, çıkarma, çarpma, bölme, üs, kök, yüzde ve binde</p>
+        <p className="subtitle">Toplama, çıkarma, çarpma, bölme, üs, kök, yüzde ve binde</p>
 
-        {/* İlk sayı, işlem ve ikinci sayı alanlarını tek satırda topluyoruz. */}
-        <div className="inputs">
+        {/* Tek bir input alanı: hem giriş hem sonuç burada gösteriliyor. */}
+        <div className="display-section">
+          <label htmlFor="calculator-display">Ekran</label>
           <input
+            id="calculator-display"
             type="text"
-            inputMode="decimal"
-            placeholder="1. sayı"
-            value={firstValue}
-            // Input değişince state'i güncelliyoruz (controlled input yapısı).
-            onChange={(event) =>
-              updateNumberInput(event.target.value, setFirstValue)
-            }
+            className="display-input"
+            value={displayValue}
+            readOnly
           />
-          <select
-            aria-label="İşlem seç"
-            value={operator}
-            // Select string döndürdüğü için Operator tipine cast ediyoruz.
-            onChange={(event) => setOperator(event.target.value as Operator)}
-          >
-            {/* Option listesi ayrı component'te; böylece App dosyası sade kalır. */}
-            <OperatorOptions />
-          </select>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder={secondInputPlaceholder}
-            value={secondValue}
-            // İkinci sayı değeri değiştikçe state güncellenir.
-            onChange={(event) =>
-              updateNumberInput(event.target.value, setSecondValue)
-            }
-          />
+          <p className="input-hint">{operatorHint}</p>
         </div>
 
-        {isDegreeOperator(operator) && (
-          <p className="input-hint">Bu işlemde ikinci alan derece olarak kullanılır.</p>
-        )}
-        {isRatioOperator(operator) && (
-          <p className="input-hint">Bu işlemde ikinci alan oran olarak kullanılır.</p>
-        )}
+        {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
+        <div className="keypad-layout">
+          <div className="number-pad">
+            <button type="button" onClick={() => appendDigit('7')}>
+              7
+            </button>
+            <button type="button" onClick={() => appendDigit('8')}>
+              8
+            </button>
+            <button type="button" onClick={() => appendDigit('9')}>
+              9
+            </button>
+            <button type="button" onClick={() => appendDigit('4')}>
+              4
+            </button>
+            <button type="button" onClick={() => appendDigit('5')}>
+              5
+            </button>
+            <button type="button" onClick={() => appendDigit('6')}>
+              6
+            </button>
+            <button type="button" onClick={() => appendDigit('1')}>
+              1
+            </button>
+            <button type="button" onClick={() => appendDigit('2')}>
+              2
+            </button>
+            <button type="button" onClick={() => appendDigit('3')}>
+              3
+            </button>
+            <button type="button" onClick={toggleSign}>
+              ±
+            </button>
+            <button type="button" onClick={() => appendDigit('0')}>
+              0
+            </button>
+            <button type="button" onClick={appendDecimal}>
+              .
+            </button>
+          </div>
 
-        {/* İki aksiyonu birlikte göstermek için butonları bir grupta tutuyoruz. */}
+          <div className="operator-pad">
+            <OperatorButtons
+              onSelect={handleOperatorSelect}
+              activeOperator={pendingOperator}
+            />
+          </div>
+        </div>
+
         <div className="actions">
-          {/* Buton tıklaması hesaplama fonksiyonunu tetikler. */}
-          <button type="button" onClick={calculate}>
-            Hesapla
+          <button type="button" className="equal" onClick={handleEqual}>
+            =
           </button>
-
-          {/* Temizle butonu tüm inputları ve sonucu varsayılan hale döndürür. */}
-          <button type="button" className="secondary" onClick={clearValues}>
+          <button type="button" className="secondary" onClick={clearAll}>
             Temizle
           </button>
-        </div>
-
-        {/* Sonuç alanı her hesaplamadan sonra state üzerinden otomatik güncellenir. */}
-        <div className="result">
-          <span>Sonuç:</span> {result}
         </div>
       </main>
 

@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için kök alma seçeneği (n√x).
-export function RootOperatorOption() {
-  return <option value="√">n√x</option>
+// "√" operatör butonu.
+export function RootOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '√' ? 'active' : ''}`}
+      onClick={() => onSelect('√')}
+    >
+      n√x
+    </button>
+  )
 }
 
 export const calculateRoot: OperationCalculator = (first, second) => {

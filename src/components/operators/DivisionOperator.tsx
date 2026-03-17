@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için bölme operatörü seçeneği.
-export function DivisionOperatorOption() {
-  return <option value="/">/</option>
+// "/" operatör butonu.
+export function DivisionOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '/' ? 'active' : ''}`}
+      onClick={() => onSelect('/')}
+    >
+      /
+    </button>
+  )
 }
 
 export const calculateDivision: OperationCalculator = (first, second) => {

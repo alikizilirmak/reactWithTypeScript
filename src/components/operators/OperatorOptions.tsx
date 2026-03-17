@@ -1,25 +1,34 @@
-import { AdditionOperatorOption } from './AdditionOperator'
-import { DivisionOperatorOption } from './DivisionOperator'
-import { MultiplicationOperatorOption } from './MultiplicationOperator'
-import { PercentOperatorOption } from './PercentOperator'
-import { PermilleOperatorOption } from './PermilleOperator'
-import { PowerOperatorOption } from './PowerOperator'
-import { RootOperatorOption } from './RootOperator'
-import { SubtractionOperatorOption } from './SubtractionOperator'
+import { AdditionOperatorButton } from './AdditionOperator'
+import { DivisionOperatorButton } from './DivisionOperator'
+import { MultiplicationOperatorButton } from './MultiplicationOperator'
+import { PercentOperatorButton } from './PercentOperator'
+import { PermilleOperatorButton } from './PermilleOperator'
+import { PowerOperatorButton } from './PowerOperator'
+import { RootOperatorButton } from './RootOperator'
+import { SubtractionOperatorButton } from './SubtractionOperator'
+import type { OperatorButtonProps } from './types'
 
-export function OperatorOptions() {
+export function OperatorButtons({ onSelect, activeOperator }: OperatorButtonProps) {
   return (
     <>
-      {/* Select içindeki option'ları ayrı operatör componentlerinden topluyoruz. */}
-      {/* Böylece bir operatörü eklemek/silmek tek dosya değişikliğiyle yapılır. */}
-      <AdditionOperatorOption />
-      <SubtractionOperatorOption />
-      <MultiplicationOperatorOption />
-      <DivisionOperatorOption />
-      <PowerOperatorOption />
-      <RootOperatorOption />
-      <PercentOperatorOption />
-      <PermilleOperatorOption />
+      {/* Butonların her biri kendi operatör component'inden geliyor. */}
+      <AdditionOperatorButton
+        onSelect={onSelect}
+        activeOperator={activeOperator}
+      />
+      <SubtractionOperatorButton
+        onSelect={onSelect}
+        activeOperator={activeOperator}
+      />
+      <MultiplicationOperatorButton
+        onSelect={onSelect}
+        activeOperator={activeOperator}
+      />
+      <DivisionOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <PercentOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <PermilleOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
     </>
   )
 }

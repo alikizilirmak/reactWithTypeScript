@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için üs alma seçeneği.
-export function PowerOperatorOption() {
-  return <option value="^">x^n</option>
+// "^" operatör butonu.
+export function PowerOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '^' ? 'active' : ''}`}
+      onClick={() => onSelect('^')}
+    >
+      x^n
+    </button>
+  )
 }
 
 // first^second hesabı.

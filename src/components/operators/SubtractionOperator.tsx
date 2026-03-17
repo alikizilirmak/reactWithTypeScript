@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için çıkarma operatörü seçeneği.
-export function SubtractionOperatorOption() {
-  return <option value="-">-</option>
+// "-" operatör butonu.
+export function SubtractionOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '-' ? 'active' : ''}`}
+      onClick={() => onSelect('-')}
+    >
+      -
+    </button>
+  )
 }
 
 // Çıkarma işlemini hesaplar.

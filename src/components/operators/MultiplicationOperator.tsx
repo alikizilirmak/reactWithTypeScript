@@ -1,8 +1,19 @@
-import type { OperationCalculator } from './types'
+import type { OperationCalculator, OperatorButtonProps } from './types'
 
-// Select için çarpma operatörü seçeneği.
-export function MultiplicationOperatorOption() {
-  return <option value="*">*</option>
+// "*" operatör butonu.
+export function MultiplicationOperatorButton({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`operator-button ${activeOperator === '*' ? 'active' : ''}`}
+      onClick={() => onSelect('*')}
+    >
+      *
+    </button>
+  )
 }
 
 // Çarpma işlemini hesaplar.
