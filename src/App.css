@@ -15,7 +15,7 @@
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   row-gap: 0.55rem;
   min-height: 0;
 }
@@ -91,8 +91,16 @@
   height: 100%;
 }
 
+.left-controls {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
 .number-pad,
-.operator-pad {
+.operator-pad,
+.right-controls {
   display: grid;
   gap: 0.5rem;
   min-height: 0;
@@ -107,6 +115,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: minmax(34px, auto);
   align-content: start;
+}
+
+.right-controls {
+  grid-template-rows: auto 1fr 1fr;
 }
 
 .number-pad button,
@@ -139,13 +151,7 @@
   color: #1d4ed8;
 }
 
-.actions {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.actions button {
+.side-action {
   width: 100%;
   border: none;
   border-radius: 0.55rem;
@@ -157,29 +163,25 @@
   cursor: pointer;
 }
 
-.actions button:hover {
+.side-action:hover {
   background: #1d4ed8;
 }
 
-.actions .equal {
+.side-action.equal {
   background: #0f766e;
 }
 
-.actions .equal:hover {
+.side-action.equal:hover {
   background: #115e59;
 }
 
-.actions .secondary {
+.side-action.secondary {
   background: #e5e7eb;
   color: #111827;
 }
 
-.actions .secondary:hover {
+.side-action.secondary:hover {
   background: #d1d5db;
-}
-
-.span-two {
-  grid-column: span 2;
 }
 
 /* Sağ panel: işlem geçmişi */

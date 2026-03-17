@@ -318,74 +318,75 @@ function App() {
           <p className="input-hint">{operatorHint}</p>
         </div>
 
-        {/* Sol blok sayısal tuşlar, sağ blok gelişmiş operatör tuşları */}
+        {/* Sol blokta sayılar + temel 4 işlem, sağ blokta gelişmiş operatörler ve aksiyonlar */}
         <div className="keypad-layout">
-          <div className="number-pad">
-            <button type="button" onClick={() => appendDigit('7')}>
-              7
-            </button>
-            <button type="button" onClick={() => appendDigit('8')}>
-              8
-            </button>
-            <button type="button" onClick={() => appendDigit('9')}>
-              9
-            </button>
-            <button type="button" onClick={() => appendDigit('4')}>
-              4
-            </button>
-            <button type="button" onClick={() => appendDigit('5')}>
-              5
-            </button>
-            <button type="button" onClick={() => appendDigit('6')}>
-              6
-            </button>
-            <button type="button" onClick={() => appendDigit('1')}>
-              1
-            </button>
-            <button type="button" onClick={() => appendDigit('2')}>
-              2
-            </button>
-            <button type="button" onClick={() => appendDigit('3')}>
-              3
-            </button>
-            <button type="button" onClick={toggleSign}>
-              ±
-            </button>
-            <button type="button" onClick={() => appendDigit('0')}>
-              0
-            </button>
-            <button type="button" onClick={appendDecimal}>
-              .
-            </button>
+          <div className="left-controls">
+            <div className="number-pad">
+              <button type="button" onClick={() => appendDigit('7')}>
+                7
+              </button>
+              <button type="button" onClick={() => appendDigit('8')}>
+                8
+              </button>
+              <button type="button" onClick={() => appendDigit('9')}>
+                9
+              </button>
+              <button type="button" onClick={() => appendDigit('4')}>
+                4
+              </button>
+              <button type="button" onClick={() => appendDigit('5')}>
+                5
+              </button>
+              <button type="button" onClick={() => appendDigit('6')}>
+                6
+              </button>
+              <button type="button" onClick={() => appendDigit('1')}>
+                1
+              </button>
+              <button type="button" onClick={() => appendDigit('2')}>
+                2
+              </button>
+              <button type="button" onClick={() => appendDigit('3')}>
+                3
+              </button>
+              <button type="button" onClick={toggleSign}>
+                ±
+              </button>
+              <button type="button" onClick={() => appendDigit('0')}>
+                0
+              </button>
+              <button type="button" onClick={appendDecimal}>
+                .
+              </button>
+            </div>
+
+            {/* Temel 4 işlem butonları ± 0 . satırının altına alındı */}
+            <div className="basic-operators-row">
+              <BasicOperatorButtons
+                onSelect={handleOperatorSelect}
+                activeOperator={pendingOperator}
+              />
+            </div>
           </div>
 
-          <div className="operator-pad">
-            <AdvancedOperatorButtons
-              onSelect={handleOperatorSelect}
-              activeOperator={pendingOperator}
-            />
+          <div className="right-controls">
+            <div className="operator-pad">
+              <AdvancedOperatorButtons
+                onSelect={handleOperatorSelect}
+                activeOperator={pendingOperator}
+              />
+            </div>
+            <button type="button" className="side-action equal" onClick={handleEqual}>
+              =
+            </button>
+            <button
+              type="button"
+              className="side-action secondary"
+              onClick={clearAll}
+            >
+              Temizle
+            </button>
           </div>
-        </div>
-
-        {/* Temel 4 işlem butonlarını alt satıra alıyoruz. */}
-        <div className="basic-operators-row">
-          <BasicOperatorButtons
-            onSelect={handleOperatorSelect}
-            activeOperator={pendingOperator}
-          />
-        </div>
-
-        <div className="actions">
-          <button
-            type="button"
-            className="equal span-two"
-            onClick={handleEqual}
-          >
-            =
-          </button>
-          <button type="button" className="secondary span-two" onClick={clearAll}>
-            Temizle
-          </button>
         </div>
       </main>
 
