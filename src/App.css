@@ -162,7 +162,7 @@
 }
 
 .operator-pad.scientific {
-  grid-template-rows: repeat(5, minmax(36px, 1fr));
+  grid-template-rows: repeat(8, minmax(30px, 1fr));
 }
 
 .number-pad button,

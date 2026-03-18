@@ -1,13 +1,18 @@
+import { calculateAbsolute } from './AbsoluteOperator'
 import { calculateAddition } from './AdditionOperator'
 import { calculateDivision } from './DivisionOperator'
+import { calculateFactorial } from './FactorialOperator'
 import { calculateLn } from './LnOperator'
 import { calculateLog } from './LogOperator'
+import { calculateMod } from './ModOperator'
 import { calculateMultiplication } from './MultiplicationOperator'
 import { OperatorButtons } from './OperatorOptions'
 import { calculatePercent } from './PercentOperator'
 import { calculatePermille } from './PermilleOperator'
 import { calculatePower } from './PowerOperator'
+import { calculateReciprocal } from './ReciprocalOperator'
 import { calculateRoot } from './RootOperator'
+import { calculateSquare } from './SquareOperator'
 import { calculateSubtraction } from './SubtractionOperator'
 import type { OperationCalculator, Operator } from './types'
 
@@ -25,6 +30,11 @@ export const operatorCalculators: Record<Operator, OperationCalculator> = {
   '/': calculateDivision,
   log: calculateLog,
   ln: calculateLn,
+  'x²': calculateSquare,
+  '1/x': calculateReciprocal,
+  '|x|': calculateAbsolute,
+  'x!': calculateFactorial,
+  mod: calculateMod,
   '^': calculatePower,
   '√': calculateRoot,
   '%': calculatePercent,

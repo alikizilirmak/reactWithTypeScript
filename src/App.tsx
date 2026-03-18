@@ -21,6 +21,7 @@ type HistoryItem = {
 }
 
 const HISTORY_STORAGE_KEY = 'calculator-history-v2'
+const MAX_HISTORY_ITEMS = 10
 const LEGACY_HISTORY_STORAGE_KEYS = ['calculator-history-v1', 'calculator-history'] as const
 const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   '+',
@@ -33,6 +34,18 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   '‰',
   'log',
   'ln',
+  'x²',
+  '1/x',
+  '|x|',
+  'x!',
+  'mod',
+])
+const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
+  'ln',
+  'x²',
+  '1/x',
+  '|x|',
+  'x!',
 ])
 
 // localStorage'dan okuduğumuz veriyi güvenli kullanmak için basit type guard.
@@ -88,6 +101,8 @@ const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
   }
 }
 
+const isUnaryOperator = (operator: Operator): boolean => UNARY_OPERATORS.has(operator)
+
 // localStorage okuma işini tek yerde topluyoruz.
 // useState'in başlangıç değerinde bunu kullanınca StrictMode'da ilk render yazımıyla
 // verinin boş diziye ezilmesi riskini de ortadan kaldırmış oluruz.
@@ -112,7 +127,7 @@ const readHistoryFromStorage = (): HistoryItem[] => {
       const normalizedHistory = parsedValue
         .map(normalizeHistoryItem)
         .filter((item): item is HistoryItem => item !== null)
-        .slice(0, 10)
+        .slice(0, MAX_HISTORY_ITEMS)
 
       if (normalizedHistory.length > 0) {
         return normalizedHistory
@@ -200,6 +215,22 @@ function App() {
       return `ln(${first}) = ${resultText}`
     }
 
+    if (selectedOperator === 'x²') {
+      return `(${first})² = ${resultText}`
+    }
+
+    if (selectedOperator === '1/x') {
+      return `1 / (${first}) = ${resultText}`
+    }
+
+    if (selectedOperator === '|x|') {
+      return `|${first}| = ${resultText}`
+    }
+
+    if (selectedOperator === 'x!') {
+      return `${first}! = ${resultText}`
+    }
+
     if (selectedOperator === 'log') {
       return `${second} tabanında log(${first}) = ${resultText}`
     }
@@ -245,7 +276,16 @@ function App() {
       ),
     }
 
-    setHistory((previousHistory) => [historyItem, ...previousHistory].slice(0, 10))
+    // Listeyi "en yeni en üstte" tutuyoruz.
+    // 10 kayıt sınırı aşılırsa listenin sonundaki (en eski) kayıt otomatik düşer.
+    setHistory((previousHistory) => {
+      const nextHistory = [historyItem, ...previousHistory]
+      if (nextHistory.length > MAX_HISTORY_ITEMS) {
+        nextHistory.length = MAX_HISTORY_ITEMS
+      }
+
+      return nextHistory
+    })
   }
 
   // Sayısal senaryolarda helper: number değerleri string'e çevirip history'e ekler.
@@ -446,8 +486,8 @@ function App() {
       return
     }
 
-    // ln tek sayı ile çalışır, bu yüzden operatöre basınca direkt hesaplama başlatıyoruz.
-    if (selectedOperator === 'ln') {
+    // Tek operandlı operatörlerde (ln, x², 1/x, |x|, x!) ikinci sayı beklemiyoruz.
+    if (isUnaryOperator(selectedOperator)) {
       setStoredValue(null)
       setPendingOperator(null)
       setIsWaitingForSecondValue(true)
@@ -561,6 +601,8 @@ function App() {
       ? 'Basit mod: sadece +, -, * ve / kullanılabilir.'
       : pendingOperator === 'log'
         ? 'Log işleminde ikinci sayı tabandır.'
+      : pendingOperator === 'mod'
+        ? 'mod işleminde ikinci sayı bölen değerdir.'
       : isDegreeOperator(pendingOperator ?? '+')
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
@@ -582,10 +624,15 @@ function App() {
   // - + - * /    => temel 4 işlem
   // - ^          => üs alma (x^n)
   // - %          => yüzde hesabı
+  // - m          => mod alma
   // - l          => ln(x)
   // - g          => logaritma (tabanlı log)
   // - r          => kök (n√x)
   // - p          => binde (‰) hesabı
+  // - s          => kare alma (x²)
+  // - i          => tersini alma (1/x)
+  // - a          => mutlak değer (|x|)
+  // - f          => faktöriyel (x!)
   // - Backspace  => son karakteri sil
   // - Enter / =  => sonucu hesapla
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
@@ -699,6 +746,41 @@ function App() {
         event.preventDefault()
         handleOperatorSelect('‰')
         flashVirtualKey('‰')
+        return
+      }
+
+      if (lowerKey === 'm') {
+        event.preventDefault()
+        handleOperatorSelect('mod')
+        flashVirtualKey('mod')
+        return
+      }
+
+      if (lowerKey === 's') {
+        event.preventDefault()
+        handleOperatorSelect('x²')
+        flashVirtualKey('x²')
+        return
+      }
+
+      if (lowerKey === 'i') {
+        event.preventDefault()
+        handleOperatorSelect('1/x')
+        flashVirtualKey('1/x')
+        return
+      }
+
+      if (lowerKey === 'a') {
+        event.preventDefault()
+        handleOperatorSelect('|x|')
+        flashVirtualKey('|x|')
+        return
+      }
+
+      if (lowerKey === 'f') {
+        event.preventDefault()
+        handleOperatorSelect('x!')
+        flashVirtualKey('x!')
       }
     }
 
@@ -748,7 +830,8 @@ function App() {
       <main className="calculator">
         <h1>Hesap Makinesi</h1>
         <p className="subtitle">
-          Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, yüzde ve binde
+          Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, yüzde, binde,
+          kare, ters, mutlak değer, faktöriyel ve mod
         </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
@@ -978,6 +1061,21 @@ function App() {
               </li>
               <li>
                 <kbd>P</kbd> : Binde hesabı (<code>‰</code>) — 2. sayı oran
+              </li>
+              <li>
+                <kbd>M</kbd> : Mod alma (<code>x mod y</code>) — 2. sayı bölen
+              </li>
+              <li>
+                <kbd>S</kbd> : Kare alma (<code>x²</code>)
+              </li>
+              <li>
+                <kbd>I</kbd> : Tersini alma (<code>1/x</code>)
+              </li>
+              <li>
+                <kbd>A</kbd> : Mutlak değer (<code>|x|</code>)
+              </li>
+              <li>
+                <kbd>F</kbd> : Faktöriyel (<code>x!</code>)
               </li>
               <li>
                 <kbd>Backspace</kbd> : Son girilen rakamı sil

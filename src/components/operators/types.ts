@@ -1,6 +1,21 @@
 // Uygulamanın tanıdığı tüm operatörleri tek yerde tutuyoruz.
 // Yeni bir operatör eklerken burada da tip olarak eklemek gerekir.
-export type Operator = '+' | '-' | '*' | '/' | '^' | '√' | '%' | '‰' | 'log' | 'ln'
+export type Operator =
+  | '+'
+  | '-'
+  | '*'
+  | '/'
+  | '^'
+  | '√'
+  | '%'
+  | '‰'
+  | 'log'
+  | 'ln'
+  | 'x²'
+  | '1/x'
+  | '|x|'
+  | 'x!'
+  | 'mod'
 
 // Her operatör hesaplama sonunda bu yapıyı döndürür:
 // - resultText: kullanıcıya gösterilecek sonuç metni
