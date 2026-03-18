@@ -14,13 +14,14 @@ import {
 type HistoryItem = {
   firstValue: string
   secondValue: string
-  operator: Operator
+  operator: Operator | 'expr'
   result: string
   expression: string
   isError: boolean
 }
 
 const HISTORY_STORAGE_KEY = 'calculator-history-v2'
+const THEME_STORAGE_KEY = 'calculator-theme-v1'
 const MAX_HISTORY_ITEMS = 15
 const LEGACY_HISTORY_STORAGE_KEYS = ['calculator-history-v1', 'calculator-history'] as const
 const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
@@ -41,6 +42,10 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   'x!',
   'mod',
 ])
+const VALID_HISTORY_OPERATORS: ReadonlySet<HistoryItem['operator']> = new Set([
+  ...VALID_OPERATORS,
+  'expr',
+])
 const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
   'ln',
   'e^x',
@@ -49,6 +54,7 @@ const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
   '|x|',
   'x!',
 ])
+type ThemeMode = 'light' | 'dark'
 
 // localStorage'dan okuduğumuz veriyi güvenli kullanmak için basit type guard.
 const isHistoryItem = (value: unknown): value is HistoryItem => {
@@ -62,7 +68,7 @@ const isHistoryItem = (value: unknown): value is HistoryItem => {
     typeof maybeItem.firstValue === 'string' &&
     typeof maybeItem.secondValue === 'string' &&
     typeof maybeItem.operator === 'string' &&
-    VALID_OPERATORS.has(maybeItem.operator as Operator) &&
+    VALID_HISTORY_OPERATORS.has(maybeItem.operator as HistoryItem['operator']) &&
     typeof maybeItem.result === 'string' &&
     typeof maybeItem.expression === 'string' &&
     typeof maybeItem.isError === 'boolean'
@@ -85,7 +91,7 @@ const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
     typeof maybeItem.firstValue !== 'string' ||
     typeof maybeItem.secondValue !== 'string' ||
     typeof maybeItem.operator !== 'string' ||
-    !VALID_OPERATORS.has(maybeItem.operator as Operator) ||
+    !VALID_HISTORY_OPERATORS.has(maybeItem.operator as HistoryItem['operator']) ||
     typeof maybeItem.result !== 'string' ||
     typeof maybeItem.expression !== 'string'
   ) {
@@ -95,7 +101,7 @@ const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
   return {
     firstValue: maybeItem.firstValue,
     secondValue: maybeItem.secondValue,
-    operator: maybeItem.operator as Operator,
+    operator: maybeItem.operator as HistoryItem['operator'],
     result: maybeItem.result,
     expression: maybeItem.expression,
     // Eski kayıtlarda yoksa başarılı işlem kabul ediyoruz.
@@ -104,6 +110,247 @@ const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
 }
 
 const isUnaryOperator = (operator: Operator): boolean => UNARY_OPERATORS.has(operator)
+
+const readThemeFromStorage = (): ThemeMode => {
+  if (typeof window === 'undefined') {
+    return 'light'
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(THEME_STORAGE_KEY)
+    return rawValue === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+type ExpressionEvaluationResult = {
+  resultText: string
+  isError: boolean
+}
+
+const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvaluationResult => {
+  const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
+  if (!expression) {
+    return {
+      resultText: 'Lütfen bir ifade girin.',
+      isError: true,
+    }
+  }
+
+  const tokens: string[] = []
+  for (let index = 0; index < expression.length; ) {
+    const currentChar = expression[index]
+
+    if (/\d|\./.test(currentChar)) {
+      let cursor = index
+      let dotCount = 0
+
+      while (cursor < expression.length && /[\d.]/.test(expression[cursor])) {
+        if (expression[cursor] === '.') {
+          dotCount += 1
+          if (dotCount > 1) {
+            return {
+              resultText: 'İfadede geçersiz sayı formatı var.',
+              isError: true,
+            }
+          }
+        }
+        cursor += 1
+      }
+
+      const numberToken = expression.slice(index, cursor)
+      if (numberToken === '.') {
+        return {
+          resultText: 'Tek başına nokta sayı olamaz.',
+          isError: true,
+        }
+      }
+
+      tokens.push(numberToken)
+      index = cursor
+      continue
+    }
+
+    if ('+-*/^()'.includes(currentChar)) {
+      tokens.push(currentChar)
+      index += 1
+      continue
+    }
+
+    return {
+      resultText: `Geçersiz karakter: "${currentChar}"`,
+      isError: true,
+    }
+  }
+
+  const normalizedTokens: string[] = []
+  for (const token of tokens) {
+    const previousToken = normalizedTokens[normalizedTokens.length - 1]
+    const canBeUnary = !previousToken || ['+', '-', '*', '/', '^', '(', 'u+', 'u-'].includes(previousToken)
+
+    if ((token === '+' || token === '-') && canBeUnary) {
+      normalizedTokens.push(token === '+' ? 'u+' : 'u-')
+      continue
+    }
+
+    normalizedTokens.push(token)
+  }
+
+  const precedence: Record<string, number> = {
+    'u+': 4,
+    'u-': 4,
+    '^': 3,
+    '*': 2,
+    '/': 2,
+    '+': 1,
+    '-': 1,
+  }
+  const isRightAssociative = (operator: string): boolean =>
+    operator === '^' || operator === 'u+' || operator === 'u-'
+  const isOperatorToken = (token: string): boolean => token in precedence
+
+  const outputQueue: string[] = []
+  const operatorStack: string[] = []
+
+  for (const token of normalizedTokens) {
+    if (!Number.isNaN(Number(token))) {
+      outputQueue.push(token)
+      continue
+    }
+
+    if (isOperatorToken(token)) {
+      while (operatorStack.length > 0) {
+        const topOperator = operatorStack[operatorStack.length - 1]
+        if (!isOperatorToken(topOperator)) {
+          break
+        }
+
+        const shouldPop = isRightAssociative(token)
+          ? precedence[token] < precedence[topOperator]
+          : precedence[token] <= precedence[topOperator]
+
+        if (!shouldPop) {
+          break
+        }
+
+        outputQueue.push(operatorStack.pop() as string)
+      }
+
+      operatorStack.push(token)
+      continue
+    }
+
+    if (token === '(') {
+      operatorStack.push(token)
+      continue
+    }
+
+    if (token === ')') {
+      let foundOpeningParenthesis = false
+      while (operatorStack.length > 0) {
+        const topOperator = operatorStack.pop() as string
+        if (topOperator === '(') {
+          foundOpeningParenthesis = true
+          break
+        }
+        outputQueue.push(topOperator)
+      }
+
+      if (!foundOpeningParenthesis) {
+        return {
+          resultText: 'Parantezler eşleşmiyor.',
+          isError: true,
+        }
+      }
+      continue
+    }
+
+    return {
+      resultText: 'İfade çözümlenemedi.',
+      isError: true,
+    }
+  }
+
+  while (operatorStack.length > 0) {
+    const topOperator = operatorStack.pop() as string
+    if (topOperator === '(' || topOperator === ')') {
+      return {
+        resultText: 'Parantezler eşleşmiyor.',
+        isError: true,
+      }
+    }
+    outputQueue.push(topOperator)
+  }
+
+  const calculationStack: number[] = []
+  for (const token of outputQueue) {
+    if (!Number.isNaN(Number(token))) {
+      calculationStack.push(Number(token))
+      continue
+    }
+
+    if (token === 'u+' || token === 'u-') {
+      const operand = calculationStack.pop()
+      if (operand === undefined) {
+        return {
+          resultText: 'İfadede eksik değer var.',
+          isError: true,
+        }
+      }
+      calculationStack.push(token === 'u-' ? -operand : operand)
+      continue
+    }
+
+    const rightOperand = calculationStack.pop()
+    const leftOperand = calculationStack.pop()
+    if (rightOperand === undefined || leftOperand === undefined) {
+      return {
+        resultText: 'İfadede eksik operatör veya değer var.',
+        isError: true,
+      }
+    }
+
+    if (token === '/' && rightOperand === 0) {
+      return {
+        resultText: 'İfadede 0 ile bölme yapılamaz.',
+        isError: true,
+      }
+    }
+
+    const operationResult =
+      token === '+'
+        ? leftOperand + rightOperand
+        : token === '-'
+          ? leftOperand - rightOperand
+          : token === '*'
+            ? leftOperand * rightOperand
+            : token === '/'
+              ? leftOperand / rightOperand
+              : leftOperand ** rightOperand
+
+    if (!Number.isFinite(operationResult)) {
+      return {
+        resultText: 'İfade sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    calculationStack.push(operationResult)
+  }
+
+  if (calculationStack.length !== 1) {
+    return {
+      resultText: 'İfade tamamlanamadı, lütfen parantez ve operatörleri kontrol edin.',
+      isError: true,
+    }
+  }
+
+  return {
+    resultText: calculationStack[0].toString(),
+    isError: false,
+  }
+}
 
 // localStorage okuma işini tek yerde topluyoruz.
 // Not: Burada veritabanı yok; geçmiş sadece kullanıcının tarayıcısında saklanır.
@@ -166,9 +413,11 @@ function App() {
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('basic')
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
+  const [expressionInput, setExpressionInput] = useState<string>('')
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
@@ -187,6 +436,21 @@ function App() {
       // Tarayıcı depolama hatası olsa da uygulama çalışmaya devam etsin.
     }
   }, [history])
+
+  // Tema seçimini localStorage'da saklayıp sayfa yenilemelerinde koruyoruz.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode)
+    } catch {
+      // Depolama hatasında tema değişimi yine de UI'da çalışmaya devam etsin.
+    }
+  }, [themeMode])
+
+  // Tema class'ını body üzerinde tutuyoruz ki arka plan dahil tüm sayfaya etki etsin.
+  useEffect(() => {
+    document.body.setAttribute('data-theme', themeMode)
+    return () => document.body.removeAttribute('data-theme')
+  }, [themeMode])
 
   // "null" değeri burada "henüz geçerli bir sayı yok" anlamında kullanılıyor.
   // Regex + Number kontrolü ile güvenli parse yapıyoruz.
@@ -286,7 +550,35 @@ function App() {
     }
 
     // Listeyi "en yeni en üstte" tutuyoruz.
-    // 10 kayıt sınırı aşılırsa listenin sonundaki (en eski) kayıt otomatik düşer.
+    // Limit aşılırsa listenin sonundaki (en eski) kayıt otomatik düşer.
+    const pushHistoryItem = (item: HistoryItem) =>
+      setHistory((previousHistory) => {
+        const nextHistory = [item, ...previousHistory]
+        if (nextHistory.length > MAX_HISTORY_ITEMS) {
+          nextHistory.length = MAX_HISTORY_ITEMS
+        }
+
+        return nextHistory
+      })
+
+    pushHistoryItem(historyItem)
+  }
+
+  const addExpressionToHistory = (
+    expressionText: string,
+    resultText: string,
+    isError: boolean,
+  ) => {
+    const normalizedExpression = expressionText.trim()
+    const historyItem: HistoryItem = {
+      firstValue: normalizedExpression,
+      secondValue: '',
+      operator: 'expr',
+      result: resultText,
+      isError,
+      expression: `${normalizedExpression} = ${resultText}`,
+    }
+
     setHistory((previousHistory) => {
       const nextHistory = [historyItem, ...previousHistory]
       if (nextHistory.length > MAX_HISTORY_ITEMS) {
@@ -570,6 +862,7 @@ function App() {
   const clearAll = () => {
     setDisplayValue('0')
     setLastPressedValue('')
+    setExpressionInput('')
     setStoredValue(null)
     setPendingOperator(null)
     setCalculationJob(null)
@@ -589,6 +882,27 @@ function App() {
     }
   }
 
+  const toggleThemeMode = () => {
+    setThemeMode((previousTheme) => (previousTheme === 'light' ? 'dark' : 'light'))
+  }
+
+  const handleExpressionCalculate = () => {
+    const trimmedExpression = expressionInput.trim()
+    if (!trimmedExpression) {
+      setDisplayValue('Lütfen önce ifade girin.')
+      return
+    }
+
+    const { resultText, isError } = evaluateParenthesizedExpression(trimmedExpression)
+    setDisplayValue(resultText)
+    setLastPressedValue(trimmedExpression)
+    addExpressionToHistory(trimmedExpression, resultText, isError)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(true)
+  }
+
   // Sadece geçmiş kayıtlarını temizlemek için ayrı bir fonksiyon.
   const clearHistory = () => {
     setHistory([])
@@ -598,6 +912,9 @@ function App() {
   const applyHistoryItem = (item: HistoryItem) => {
     setDisplayValue(item.result)
     setLastPressedValue(item.expression)
+    if (item.operator === 'expr') {
+      setExpressionInput(item.firstValue)
+    }
     setStoredValue(null)
     setPendingOperator(null)
     setCalculationJob(null)
@@ -616,7 +933,7 @@ function App() {
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
-          : 'Rakam girip bir operatör seçebilirsin.'
+          : 'Rakam girip operatör seçebilir veya parantezli ifade alanını kullanabilirsin.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
   useEffect(() => {
@@ -643,6 +960,7 @@ function App() {
   // - i          => tersini alma (1/x)
   // - a          => mutlak değer (|x|)
   // - f          => faktöriyel (x!)
+  // - ( )        => parantezli ifade alanında kullanılabilir
   // - Backspace  => son karakteri sil
   // - Enter / =  => sonucu hesapla
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
@@ -817,7 +1135,7 @@ function App() {
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
-    <div className="app-layout">
+    <div className={`app-layout ${themeMode === 'dark' ? 'theme-dark' : ''}`}>
       {calculationJob && (
         // calculationJob varsa renderless hesaplama component'i çalışır.
         // Sonucu onResult callback'i ile tekrar App state'ine taşır.
@@ -862,26 +1180,62 @@ function App() {
           <p className="input-hint">{operatorHint}</p>
         </div>
 
-        {/* Ekranın altındaki mod seçimi butonları */}
-        <div className="mode-switch" role="group" aria-label="Hesap makinesi modu">
-          <button
-            type="button"
-            className={`mode-button ${calculatorMode === 'basic' ? 'active' : ''}`}
-            onClick={() => handleModeChange('basic')}
-          >
-            Basit Hesap Makinesi
-          </button>
-          <button
-            type="button"
-            className={`mode-button ${calculatorMode === 'scientific' ? 'active' : ''}`}
-            onClick={() => handleModeChange('scientific')}
-          >
-            Bilimsel Hesap Makinesi
+        {/* Mod seçimi ve tema kontrolü */}
+        <div className="mode-and-theme">
+          <div className="mode-switch" role="group" aria-label="Hesap makinesi modu">
+            <button
+              type="button"
+              className={`mode-button ${calculatorMode === 'basic' ? 'active' : ''}`}
+              onClick={() => handleModeChange('basic')}
+            >
+              Basit Hesap Makinesi
+            </button>
+            <button
+              type="button"
+              className={`mode-button ${calculatorMode === 'scientific' ? 'active' : ''}`}
+              onClick={() => handleModeChange('scientific')}
+            >
+              Bilimsel Hesap Makinesi
+            </button>
+          </div>
+          <button type="button" className="theme-toggle" onClick={toggleThemeMode}>
+            {themeMode === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
           </button>
         </div>
         <p className="shortcut-hint">
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
+        <div className="expression-section">
+          <label className="expression-label" htmlFor="expression-input">
+            Parantezli ifade (örn: <code>(2+3)*4^2</code>)
+          </label>
+          <input
+            id="expression-input"
+            type="text"
+            className="expression-input"
+            value={expressionInput}
+            onChange={(event) => setExpressionInput(event.target.value)}
+            placeholder="(2+3)*(5-1)"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                handleExpressionCalculate()
+              }
+            }}
+          />
+          <div className="expression-actions">
+            <button type="button" className="expression-calculate" onClick={handleExpressionCalculate}>
+              İfadeyi Hesapla
+            </button>
+            <button
+              type="button"
+              className="expression-clear"
+              onClick={() => setExpressionInput('')}
+            >
+              İfadeyi Temizle
+            </button>
+          </div>
+        </div>
 
         {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
         <div className="keypad-layout">
@@ -1059,6 +1413,9 @@ function App() {
               </li>
               <li>
                 <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> : 4 işlem
+              </li>
+              <li>
+                <kbd>(</kbd> <kbd>)</kbd> : Parantezli ifadede grup önceliği
               </li>
               <li className="shortcut-section">
                 <strong>Bilimsel kısayollar:</strong>

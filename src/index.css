@@ -10,3 +10,7 @@ body {
   place-items: center;
   background: linear-gradient(160deg, #dbeafe 0%, #eff6ff 45%, #bfdbfe 100%);
 }
+
+body[data-theme='dark'] {
+  background: linear-gradient(165deg, #0f172a 0%, #111827 45%, #1f2937 100%);
+}
