@@ -19,7 +19,6 @@ import type { OperatorButtonProps } from './types'
 export function OperatorButtons({
   onSelect,
   activeOperator,
-  showScientific = true,
 }: OperatorButtonProps) {
   return (
     <>
@@ -37,31 +36,18 @@ export function OperatorButtons({
         activeOperator={activeOperator}
       />
       <DivisionOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-      {showScientific && (
-        <>
-          <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <LogOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <LnOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <ExpOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <SquareOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <ReciprocalOperatorButton
-            onSelect={onSelect}
-            activeOperator={activeOperator}
-          />
-          <AbsoluteOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <FactorialOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <ModOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
-          <PercentOperatorButton
-            onSelect={onSelect}
-            activeOperator={activeOperator}
-          />
-          <PermilleOperatorButton
-            onSelect={onSelect}
-            activeOperator={activeOperator}
-          />
-        </>
-      )}
+      <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <LogOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <LnOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <ExpOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <SquareOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <ReciprocalOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <AbsoluteOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <FactorialOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <ModOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <PercentOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <PermilleOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
     </>
   )
 }

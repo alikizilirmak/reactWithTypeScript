@@ -14,6 +14,8 @@
 }
 
 .calculator {
+  --operator-max-height: calc(8 * 34px + 7 * 0.5rem);
+
   width: 100%;
   height: var(--panel-height);
   min-height: var(--panel-height);
@@ -91,17 +93,21 @@
   font-size: 0.87rem;
 }
 
-.mode-switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-
 .mode-and-theme {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.5rem;
   align-items: center;
+}
+
+.operator-visibility-note {
+  border: 1px solid #d1d5db;
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  background: #f9fafb;
+  color: #4b5563;
+  font-size: 0.83rem;
+  font-weight: 600;
 }
 
 .theme-toggle {
@@ -118,27 +124,6 @@
 
 .theme-toggle:hover {
   background: #f3f4f6;
-}
-
-.mode-button {
-  border: 1px solid #d1d5db;
-  border-radius: 0.55rem;
-  padding: 0.55rem 0.65rem;
-  background: #f9fafb;
-  color: #111827;
-  font-size: 0.86rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.mode-button:hover {
-  background: #f3f4f6;
-}
-
-.mode-button.active {
-  border-color: #93c5fd;
-  background: #dbeafe;
-  color: #1d4ed8;
 }
 
 .shortcut-hint {
@@ -162,8 +147,8 @@
   grid-template-columns: 2fr 1fr;
   gap: 0.6rem;
   align-self: start;
-  align-items: start;
-  min-height: 0;
+  align-items: stretch;
+  min-height: var(--operator-max-height);
 }
 
 .keypad-left,
@@ -175,22 +160,21 @@
 }
 
 .keypad-left {
-  align-self: start;
-  grid-template-rows: auto auto;
+  align-self: stretch;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .number-pad {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(36px, 1fr));
+  height: 100%;
 }
 
 .operator-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-self: start;
-}
-
-.operator-pad.basic {
-  grid-template-rows: repeat(2, minmax(36px, 1fr));
+  align-self: stretch;
+  height: 100%;
 }
 
 .operator-pad.scientific {
@@ -568,7 +552,7 @@
 }
 
 .app-layout.theme-dark .display-board,
-.app-layout.theme-dark .mode-button,
+.app-layout.theme-dark .operator-visibility-note,
 .app-layout.theme-dark .theme-toggle,
 .app-layout.theme-dark .number-pad button,
 .app-layout.theme-dark .operator-button,
@@ -602,7 +586,6 @@
   color: #93c5fd;
 }
 
-.app-layout.theme-dark .mode-button:hover,
 .app-layout.theme-dark .theme-toggle:hover,
 .app-layout.theme-dark .number-pad button:hover,
 .app-layout.theme-dark .operator-button:hover,

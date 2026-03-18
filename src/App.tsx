@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { CalculationComponent } from './components/calculation/CalculationComponent'
 import {
-  isBasicOperator,
   isDegreeOperator,
   isRatioOperator,
   OperatorButtons,
@@ -409,7 +408,6 @@ type CalculationJob = {
   nextOperator?: Operator
 }
 
-type CalculatorMode = 'basic' | 'scientific'
 type HistoryFilter = 'all' | 'success' | 'error' | 'expression'
 
 function App() {
@@ -420,7 +418,6 @@ function App() {
   const [storedValue, setStoredValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
-  const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('basic')
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
@@ -838,17 +835,18 @@ function App() {
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
     if (isExpressionInputActive) {
-      if (selectedOperator === '+' || selectedOperator === '-' || selectedOperator === '*' || selectedOperator === '/' || selectedOperator === '^') {
+      if (
+        selectedOperator === '+' ||
+        selectedOperator === '-' ||
+        selectedOperator === '*' ||
+        selectedOperator === '/' ||
+        selectedOperator === '^'
+      ) {
         appendExpressionToken(selectedOperator)
         return
       }
 
       setDisplayValue('Parantezli ifadede sadece +, -, *, / ve ^ kullanılabilir.')
-      return
-    }
-
-    // Basit modda güvenlik kontrolü: 4 işlem dışındaki operatörleri işleme alma.
-    if (calculatorMode === 'basic' && !isBasicOperator(selectedOperator)) {
       return
     }
 
@@ -963,19 +961,6 @@ function App() {
     setIsExpressionInputActive(false)
   }
 
-  // Mod değişimi: basit / bilimsel.
-  // Basit moda geçerken bilimsel bir operatör seçiliyse bekleyen işlemi temizliyoruz.
-  const handleModeChange = (nextMode: CalculatorMode) => {
-    setCalculatorMode(nextMode)
-
-    if (nextMode === 'basic' && pendingOperator && !isBasicOperator(pendingOperator)) {
-      setPendingOperator(null)
-      setStoredValue(null)
-      setCalculationJob(null)
-      setIsWaitingForSecondValue(false)
-    }
-  }
-
   const toggleThemeMode = () => {
     setThemeMode((previousTheme) => (previousTheme === 'light' ? 'dark' : 'light'))
   }
@@ -1021,10 +1006,8 @@ function App() {
 
   // UI'da kullanıcıya hangi ikinci değerin beklendiğini anlatan kısa metin.
   const operatorHint =
-    calculatorMode === 'basic'
-      ? 'Basit mod: sadece +, -, * ve / kullanılabilir.'
-      : pendingOperator === 'log'
-        ? 'Log işleminde ikinci sayı tabandır.'
+    pendingOperator === 'log'
+      ? 'Log işleminde ikinci sayı tabandır.'
       : pendingOperator === 'mod'
         ? 'mod işleminde ikinci sayı bölen değerdir.'
       : isDegreeOperator(pendingOperator ?? '+')
@@ -1254,7 +1237,6 @@ function App() {
     appendDigit,
     appendExpressionToken,
     backspaceDisplay,
-    calculatorMode,
     clearAll,
     handleEqual,
     handleOperatorSelect,
@@ -1309,24 +1291,11 @@ function App() {
           <p className="input-hint">{operatorHint}</p>
         </div>
 
-        {/* Mod seçimi ve tema kontrolü */}
+        {/* Operatör görünümü ve tema kontrolü */}
         <div className="mode-and-theme">
-          <div className="mode-switch" role="group" aria-label="Hesap makinesi modu">
-            <button
-              type="button"
-              className={`mode-button ${calculatorMode === 'basic' ? 'active' : ''}`}
-              onClick={() => handleModeChange('basic')}
-            >
-              Basit Hesap Makinesi
-            </button>
-            <button
-              type="button"
-              className={`mode-button ${calculatorMode === 'scientific' ? 'active' : ''}`}
-              onClick={() => handleModeChange('scientific')}
-            >
-              Bilimsel Hesap Makinesi
-            </button>
-          </div>
+          <span className="operator-visibility-note">
+            Tüm operatörler görünür durumda.
+          </span>
           <button type="button" className="theme-toggle" onClick={toggleThemeMode}>
             {themeMode === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
           </button>
@@ -1456,12 +1425,8 @@ function App() {
             </div>
           </div>
 
-          <div className={`operator-pad ${calculatorMode}`}>
-            <OperatorButtons
-              onSelect={handleOperatorSelect}
-              activeOperator={pendingOperator}
-              showScientific={calculatorMode === 'scientific'}
-            />
+          <div className="operator-pad scientific">
+            <OperatorButtons onSelect={handleOperatorSelect} activeOperator={pendingOperator} />
           </div>
         </div>
       </main>

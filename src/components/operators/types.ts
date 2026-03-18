@@ -38,5 +38,4 @@ export type OperationCalculator = (
 export type OperatorButtonProps = {
   onSelect: (operator: Operator) => void
   activeOperator: Operator | null
-  showScientific?: boolean
 }
