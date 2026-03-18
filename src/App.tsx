@@ -106,6 +106,8 @@ const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
 const isUnaryOperator = (operator: Operator): boolean => UNARY_OPERATORS.has(operator)
 
 // localStorage okuma işini tek yerde topluyoruz.
+// Not: Burada veritabanı yok; geçmiş sadece kullanıcının tarayıcısında saklanır.
+// Bu yüzden uygulamayı kapatıp açınca (aynı tarayıcı/origin'de) history geri gelir.
 // useState'in başlangıç değerinde bunu kullanınca StrictMode'da ilk render yazımıyla
 // verinin boş diziye ezilmesi riskini de ortadan kaldırmış oluruz.
 const readHistoryFromStorage = (): HistoryItem[] => {
@@ -177,6 +179,7 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>(() => readHistoryFromStorage())
 
   // History değiştikçe localStorage'a yazarak kalıcı hale getiriyoruz.
+  // Sayfa yenileme veya uygulamayı yeniden başlatma sonrası aynı veriyi tekrar okuyabiliriz.
   useEffect(() => {
     try {
       window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history))
