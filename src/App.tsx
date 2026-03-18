@@ -18,6 +18,7 @@ type HistoryItem = {
   result: string
   expression: string
   isError: boolean
+  createdAt: number
 }
 
 const HISTORY_STORAGE_KEY = 'calculator-history-v2'
@@ -71,7 +72,9 @@ const isHistoryItem = (value: unknown): value is HistoryItem => {
     VALID_HISTORY_OPERATORS.has(maybeItem.operator as HistoryItem['operator']) &&
     typeof maybeItem.result === 'string' &&
     typeof maybeItem.expression === 'string' &&
-    typeof maybeItem.isError === 'boolean'
+    typeof maybeItem.isError === 'boolean' &&
+    typeof maybeItem.createdAt === 'number' &&
+    Number.isFinite(maybeItem.createdAt)
   )
 }
 
@@ -106,6 +109,10 @@ const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
     expression: maybeItem.expression,
     // Eski kayıtlarda yoksa başarılı işlem kabul ediyoruz.
     isError: typeof maybeItem.isError === 'boolean' ? maybeItem.isError : false,
+    createdAt:
+      typeof maybeItem.createdAt === 'number' && Number.isFinite(maybeItem.createdAt)
+        ? maybeItem.createdAt
+        : Date.now(),
   }
 }
 
@@ -403,6 +410,7 @@ type CalculationJob = {
 }
 
 type CalculatorMode = 'basic' | 'scientific'
+type HistoryFilter = 'all' | 'success' | 'error' | 'expression'
 
 function App() {
   // React'teki "useState" bir Hook'tur.
@@ -414,6 +422,7 @@ function App() {
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('basic')
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
@@ -541,6 +550,7 @@ function App() {
       operator: selectedOperator,
       result: resultText,
       isError,
+      createdAt: Date.now(),
       expression: buildExpression(
         displayFirst,
         selectedOperator,
@@ -576,6 +586,7 @@ function App() {
       operator: 'expr',
       result: resultText,
       isError,
+      createdAt: Date.now(),
       expression: `${normalizedExpression} = ${resultText}`,
     }
 
@@ -984,6 +995,29 @@ function App() {
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
   }
+
+  const formatHistoryTimestamp = (timestamp: number): string => {
+    const dateValue = new Date(timestamp)
+    return dateValue.toLocaleString('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  }
+
+  const filteredHistory = history.filter((item) => {
+    if (historyFilter === 'all') {
+      return true
+    }
+
+    if (historyFilter === 'expression') {
+      return item.operator === 'expr'
+    }
+
+    return historyFilter === 'error' ? item.isError : !item.isError
+  })
 
   // UI'da kullanıcıya hangi ikinci değerin beklendiğini anlatan kısa metin.
   const operatorHint =
@@ -1444,13 +1478,47 @@ function App() {
             Tümünü Temizle
           </button>
         </div>
+        <div className="history-filters" role="group" aria-label="Geçmiş filtresi">
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('all')}
+          >
+            Tümü
+          </button>
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'success' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('success')}
+          >
+            Başarılı
+          </button>
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'error' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('error')}
+          >
+            Hatalı
+          </button>
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'expression' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('expression')}
+          >
+            İfade
+          </button>
+        </div>
 
         <div className="history-content">
-          {history.length === 0 ? (
-            <p className="empty-history">Henüz işlem yapılmadı.</p>
+          {filteredHistory.length === 0 ? (
+            <p className="empty-history">
+              {history.length === 0
+                ? 'Henüz işlem yapılmadı.'
+                : 'Seçili filtrede gösterilecek kayıt yok.'}
+            </p>
           ) : (
             <ol className="history-list">
-              {history.map((item, index) => (
+              {filteredHistory.map((item, index) => (
                 <li key={`${item.expression}-${index}`} className="history-row">
                   <span className="history-index">{index + 1}.</span>
                   <button
@@ -1458,7 +1526,10 @@ function App() {
                     className={`history-item ${item.isError ? 'error' : 'success'}`}
                     onClick={() => applyHistoryItem(item)}
                   >
-                    {item.expression}
+                    <span className="history-expression">{item.expression}</span>
+                    <span className="history-timestamp">
+                      {formatHistoryTimestamp(item.createdAt)}
+                    </span>
                   </button>
                 </li>
               ))}

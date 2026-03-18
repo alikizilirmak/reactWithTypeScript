@@ -304,6 +304,34 @@
   gap: 0.75rem;
 }
 
+.history-filters {
+  margin-top: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.history-filter {
+  border: 1px solid #d1d5db;
+  border-radius: 0.45rem;
+  background: #f9fafb;
+  color: #111827;
+  padding: 0.4rem 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-filter:hover {
+  background: #f3f4f6;
+}
+
+.history-filter.active {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .history h2 {
   margin: 0;
   font-size: clamp(1.08rem, 1.25vw, 1.28rem);
@@ -364,6 +392,8 @@
 
 .history-item {
   width: 100%;
+  display: grid;
+  gap: 0.22rem;
   text-align: left;
   border: 1px solid #e5e7eb;
   border-radius: 0.45rem;
@@ -373,6 +403,16 @@
   font-size: clamp(0.84rem, 0.95vw, 0.95rem);
   cursor: pointer;
   word-break: break-word;
+}
+
+.history-expression {
+  font-weight: 600;
+}
+
+.history-timestamp {
+  font-size: 0.74rem;
+  opacity: 0.78;
+  font-variant-numeric: tabular-nums;
 }
 
 .history-item:hover {
@@ -527,6 +567,7 @@
 .app-layout.theme-dark .number-pad button,
 .app-layout.theme-dark .operator-button,
 .app-layout.theme-dark .clear-history,
+.app-layout.theme-dark .history-filter,
 .app-layout.theme-dark .history-item,
 .app-layout.theme-dark .shortcut-modal {
   border-color: #374151;
@@ -560,8 +601,15 @@
 .app-layout.theme-dark .number-pad button:hover,
 .app-layout.theme-dark .operator-button:hover,
 .app-layout.theme-dark .clear-history:hover,
+.app-layout.theme-dark .history-filter:hover,
 .app-layout.theme-dark .history-item:hover {
   background: #273449;
+}
+
+.app-layout.theme-dark .history-filter.active {
+  border-color: #3b82f6;
+  background: #1e3a8a;
+  color: #dbeafe;
 }
 
 .app-layout.theme-dark .history-item.success {
@@ -619,5 +667,9 @@
 
   .mode-and-theme {
     grid-template-columns: 1fr;
+  }
+
+  .history-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
