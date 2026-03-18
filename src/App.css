@@ -24,9 +24,16 @@
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   display: grid;
-  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   row-gap: 0.55rem;
   align-content: start;
+}
+
+.calculator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .calculator h1 {
@@ -53,9 +60,9 @@
   width: 100%;
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.7rem 0.75rem;
   background: #f9fafb;
-  min-height: calc(5 * 1.05rem + 1.5rem);
+  min-height: calc(5 * 1.4rem + 1.85rem);
   display: grid;
   grid-template-rows: repeat(5, minmax(0, 1fr));
 }
@@ -92,37 +99,57 @@
   font-size: 0.87rem;
 }
 
-.mode-and-theme {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.operator-visibility-note {
+.theme-switch {
   border: 1px solid #d1d5db;
-  border-radius: 0.55rem;
-  padding: 0.5rem 0.65rem;
-  background: #f9fafb;
-  color: #4b5563;
-  font-size: 0.83rem;
-  font-weight: 600;
-}
-
-.theme-toggle {
-  border: 1px solid #d1d5db;
-  border-radius: 0.55rem;
-  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  padding: 0.22rem 0.45rem 0.22rem 0.24rem;
   background: #f9fafb;
   color: #111827;
-  font-size: 0.83rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   white-space: nowrap;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.theme-toggle:hover {
+.theme-switch:hover {
   background: #f3f4f6;
+}
+
+.theme-switch-track {
+  width: 2rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem;
+  transition: background 0.2s ease;
+}
+
+.theme-switch-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.theme-switch.dark .theme-switch-track {
+  background: #2563eb;
+}
+
+.theme-switch.dark .theme-switch-thumb {
+  transform: translateX(0.9rem);
+}
+
+.theme-switch-text {
+  line-height: 1;
 }
 
 .shortcut-hint {
@@ -551,8 +578,7 @@
 }
 
 .app-layout.theme-dark .display-board,
-.app-layout.theme-dark .operator-visibility-note,
-.app-layout.theme-dark .theme-toggle,
+.app-layout.theme-dark .theme-switch,
 .app-layout.theme-dark .number-pad button,
 .app-layout.theme-dark .operator-button,
 .app-layout.theme-dark .clear-history,
@@ -585,7 +611,7 @@
   color: #93c5fd;
 }
 
-.app-layout.theme-dark .theme-toggle:hover,
+.app-layout.theme-dark .theme-switch:hover,
 .app-layout.theme-dark .number-pad button:hover,
 .app-layout.theme-dark .operator-button:hover,
 .app-layout.theme-dark .clear-history:hover,
@@ -639,6 +665,18 @@
   background: #4b5563;
 }
 
+.app-layout.theme-dark .theme-switch-track {
+  background: #4b5563;
+}
+
+.app-layout.theme-dark .theme-switch.dark .theme-switch-track {
+  background: #3b82f6;
+}
+
+.app-layout.theme-dark .theme-switch-thumb {
+  background: #f9fafb;
+}
+
 @media (max-width: 860px) {
   .app-layout {
     --panel-height: clamp(520px, 74vh, 700px);
@@ -649,8 +687,8 @@
     grid-template-columns: 1fr;
   }
 
-  .mode-and-theme {
-    grid-template-columns: 1fr;
+  .calculator-header {
+    align-items: flex-start;
   }
 
   .history-filters {

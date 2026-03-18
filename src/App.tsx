@@ -1275,7 +1275,24 @@ function App() {
 
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
-        <h1>Hesap Makinesi</h1>
+        <div className="calculator-header">
+          <h1>Hesap Makinesi</h1>
+          <button
+            type="button"
+            className={`theme-switch ${themeMode === 'dark' ? 'dark' : 'light'}`}
+            role="switch"
+            aria-checked={themeMode === 'dark'}
+            aria-label="Tema değiştir"
+            onClick={toggleThemeMode}
+          >
+            <span className="theme-switch-track">
+              <span className="theme-switch-thumb" />
+            </span>
+            <span className="theme-switch-text">
+              {themeMode === 'dark' ? 'Koyu Tema' : 'Açık Tema'}
+            </span>
+          </button>
+        </div>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
           binde, kare, ters, mutlak değer, faktöriyel ve mod
@@ -1291,15 +1308,6 @@ function App() {
           <p className="input-hint">{operatorHint}</p>
         </div>
 
-        {/* Operatör görünümü ve tema kontrolü */}
-        <div className="mode-and-theme">
-          <span className="operator-visibility-note">
-            Tüm operatörler görünür durumda.
-          </span>
-          <button type="button" className="theme-toggle" onClick={toggleThemeMode}>
-            {themeMode === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
-          </button>
-        </div>
         <p className="shortcut-hint">
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
