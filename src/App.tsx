@@ -846,7 +846,7 @@ function App() {
 
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
-        <h1>calculatorWithReact</h1>
+        <h1>Hesap Makinesi</h1>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
           binde, kare, ters, mutlak değer, faktöriyel ve mod
