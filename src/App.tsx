@@ -436,7 +436,17 @@ function App() {
   }, [])
 
   // Klavye desteği:
-  // sayı/operatör/enter ile hesap yapabiliriz, escape ile temizleyebiliriz.
+  // - 0..9    => sayı girişi
+  // - . ,     => ondalık ayırıcı
+  // - + - * / => temel 4 işlem
+  // - ^ %     => bilimsel operatörler
+  // - l       => ln operatörü
+  // - g       => log operatörü
+  // - r       => kök (√) operatörü
+  // - p       => binde (‰) operatörü
+  // - Enter/= => sonucu hesapla
+  // - Escape  => temizle
+  // Not: Ctrl/Meta/Alt kombinasyonlarını özellikle yakalamıyoruz.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey) {
