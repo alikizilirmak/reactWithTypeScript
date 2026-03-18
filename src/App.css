@@ -525,6 +525,26 @@
   color: #f3f4f6;
 }
 
+.app-layout.theme-dark .shortcut-modal h3,
+.app-layout.theme-dark .shortcut-modal ul {
+  color: #e5e7eb;
+}
+
+.app-layout.theme-dark .shortcut-modal li.shortcut-section {
+  border-top-color: #374151;
+}
+
+.app-layout.theme-dark .shortcut-modal kbd {
+  background: #111827;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.app-layout.theme-dark .shortcut-modal code {
+  background: #111827;
+  color: #e5e7eb;
+}
+
 .app-layout.theme-dark .mode-button:hover,
 .app-layout.theme-dark .theme-toggle:hover,
 .app-layout.theme-dark .number-pad button:hover,
