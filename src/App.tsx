@@ -21,7 +21,7 @@ type HistoryItem = {
 }
 
 const HISTORY_STORAGE_KEY = 'calculator-history-v2'
-const MAX_HISTORY_ITEMS = 10
+const MAX_HISTORY_ITEMS = 15
 const LEGACY_HISTORY_STORAGE_KEYS = ['calculator-history-v1', 'calculator-history'] as const
 const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   '+',
@@ -981,7 +981,7 @@ function App() {
         </div>
       </main>
 
-      {/* Sağdaki ayrı div: son 10 işlemin tarihçesi */}
+      {/* Sağdaki ayrı div: son 15 işlemin tarihçesi */}
       <aside className="history" aria-label="İşlem geçmişi">
         <div className="history-header">
           <h2>İşlem Geçmişi</h2>
@@ -999,9 +999,10 @@ function App() {
           {history.length === 0 ? (
             <p className="empty-history">Henüz işlem yapılmadı.</p>
           ) : (
-            <ol>
+            <ol className="history-list">
               {history.map((item, index) => (
-                <li key={`${item.expression}-${index}`}>
+                <li key={`${item.expression}-${index}`} className="history-row">
+                  <span className="history-index">{index + 1}.</span>
                   <button
                     type="button"
                     className={`history-item ${item.isError ? 'error' : 'success'}`}
