@@ -17,6 +17,7 @@
   --scientific-keypad-height: calc(8 * 30px + 7 * 0.5rem);
 
   width: 100%;
+  height: var(--panel-height);
   min-height: var(--panel-height);
   padding: var(--panel-padding);
   border-radius: var(--panel-radius);
@@ -288,6 +289,7 @@
 /* Sağ panel: işlem geçmişi */
 .history {
   width: 100%;
+  height: var(--panel-height);
   min-height: var(--panel-height);
   padding: var(--panel-padding);
   border-radius: var(--panel-radius);
