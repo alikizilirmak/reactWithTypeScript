@@ -17,7 +17,7 @@
   --operator-max-height: calc(8 * 34px + 7 * 0.5rem);
 
   width: 100%;
-  height: var(--panel-height);
+  height: auto;
   min-height: var(--panel-height);
   padding: var(--panel-padding);
   border-radius: var(--panel-radius);
@@ -27,7 +27,6 @@
   grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
   row-gap: 0.55rem;
   align-content: start;
-  min-height: 0;
 }
 
 .calculator h1 {
@@ -277,7 +276,7 @@
 /* Sağ panel: işlem geçmişi */
 .history {
   width: 100%;
-  height: var(--panel-height);
+  height: auto;
   min-height: var(--panel-height);
   padding: var(--panel-padding);
   border-radius: var(--panel-radius);
