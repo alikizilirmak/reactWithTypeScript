@@ -417,7 +417,7 @@ function App() {
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
-  const [expressionInput, setExpressionInput] = useState<string>('')
+  const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
@@ -685,36 +685,68 @@ function App() {
     setStoredValue(null)
     setPendingOperator(null)
     setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
     setCalculationJob(null)
+  }
+
+  // Parantezli ifade yazarken karakterleri doğrudan ekrana ekliyoruz.
+  const appendExpressionToken = (token: string) => {
+    const normalizedToken = token === ',' ? '.' : token
+    const parsedCurrentValue = parseNumberInput(displayValue)
+    const canReuseCurrentDisplay =
+      isExpressionInputActive || (parsedCurrentValue !== null && displayValue !== '0')
+    const nextValue = `${canReuseCurrentDisplay ? displayValue : ''}${normalizedToken}`
+
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(false)
+    setIsExpressionInputActive(true)
   }
 
   // Rakam butonları için giriş fonksiyonu.
   // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
   const appendDigit = (digit: string) => {
+    if (isExpressionInputActive) {
+      appendExpressionToken(digit)
+      return
+    }
+
     if (isWaitingForSecondValue || parseNumberInput(displayValue) === null) {
       setDisplayValue(digit)
       setLastPressedValue(digit)
       setIsWaitingForSecondValue(false)
+      setIsExpressionInputActive(false)
       return
     }
 
     if (displayValue === '0') {
       setDisplayValue(digit)
       setLastPressedValue(digit)
+      setIsExpressionInputActive(false)
       return
     }
 
     const nextValue = `${displayValue}${digit}`
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
+    setIsExpressionInputActive(false)
   }
 
   // Ondalık nokta ekleme işlemi.
   const appendDecimal = () => {
+    if (isExpressionInputActive) {
+      appendExpressionToken('.')
+      return
+    }
+
     if (isWaitingForSecondValue || parseNumberInput(displayValue) === null) {
       setDisplayValue('0.')
       setLastPressedValue('0.')
       setIsWaitingForSecondValue(false)
+      setIsExpressionInputActive(false)
       return
     }
 
@@ -722,6 +754,7 @@ function App() {
       const nextValue = `${displayValue}.`
       setDisplayValue(nextValue)
       setLastPressedValue(nextValue)
+      setIsExpressionInputActive(false)
     }
   }
 
@@ -747,6 +780,24 @@ function App() {
 
   // Backspace davranışı: son girilen karakteri siler.
   const backspaceDisplay = () => {
+    if (isExpressionInputActive) {
+      if (displayValue.length <= 1) {
+        setDisplayValue('0')
+        setLastPressedValue('')
+        setIsExpressionInputActive(false)
+        return
+      }
+
+      const nextValue = displayValue.slice(0, -1)
+      setDisplayValue(nextValue)
+      setLastPressedValue(nextValue)
+
+      if (!/[()+\-*/^]/.test(nextValue)) {
+        setIsExpressionInputActive(false)
+      }
+      return
+    }
+
     if (isWaitingForSecondValue) {
       return
     }
@@ -769,11 +820,22 @@ function App() {
 
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
+    setIsExpressionInputActive(false)
   }
 
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
+    if (isExpressionInputActive) {
+      if (selectedOperator === '+' || selectedOperator === '-' || selectedOperator === '*' || selectedOperator === '/' || selectedOperator === '^') {
+        appendExpressionToken(selectedOperator)
+        return
+      }
+
+      setDisplayValue('Parantezli ifadede sadece +, -, *, / ve ^ kullanılabilir.')
+      return
+    }
+
     // Basit modda güvenlik kontrolü: 4 işlem dışındaki operatörleri işleme alma.
     if (calculatorMode === 'basic' && !isBasicOperator(selectedOperator)) {
       return
@@ -805,6 +867,7 @@ function App() {
       setStoredValue(currentValue)
       setPendingOperator(selectedOperator)
       setIsWaitingForSecondValue(true)
+      setIsExpressionInputActive(false)
       return
     }
 
@@ -823,11 +886,30 @@ function App() {
 
     setPendingOperator(selectedOperator)
     setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
   }
 
   // "=" butonu: bekleyen işlemi çalıştırır.
   const handleEqual = () => {
     setLastPressedValue('=')
+
+    const shouldEvaluateExpression =
+      isExpressionInputActive || displayValue.includes('(') || displayValue.includes(')')
+
+    if (shouldEvaluateExpression) {
+      const expressionText = displayValue.trim()
+      const { resultText, isError } = evaluateParenthesizedExpression(expressionText)
+      setDisplayValue(resultText)
+      setLastPressedValue(expressionText)
+      addExpressionToHistory(expressionText, resultText, isError)
+      setStoredValue(null)
+      setPendingOperator(null)
+      setCalculationJob(null)
+      setIsWaitingForSecondValue(true)
+      setIsExpressionInputActive(false)
+      return
+    }
+
     if (pendingOperator === null || storedValue === null) {
       return
     }
@@ -847,6 +929,7 @@ function App() {
       setStoredValue(null)
       setPendingOperator(null)
       setIsWaitingForSecondValue(true)
+      setIsExpressionInputActive(false)
       return
     }
 
@@ -862,11 +945,11 @@ function App() {
   const clearAll = () => {
     setDisplayValue('0')
     setLastPressedValue('')
-    setExpressionInput('')
     setStoredValue(null)
     setPendingOperator(null)
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
+    setIsExpressionInputActive(false)
   }
 
   // Mod değişimi: basit / bilimsel.
@@ -886,23 +969,6 @@ function App() {
     setThemeMode((previousTheme) => (previousTheme === 'light' ? 'dark' : 'light'))
   }
 
-  const handleExpressionCalculate = () => {
-    const trimmedExpression = expressionInput.trim()
-    if (!trimmedExpression) {
-      setDisplayValue('Lütfen önce ifade girin.')
-      return
-    }
-
-    const { resultText, isError } = evaluateParenthesizedExpression(trimmedExpression)
-    setDisplayValue(resultText)
-    setLastPressedValue(trimmedExpression)
-    addExpressionToHistory(trimmedExpression, resultText, isError)
-    setStoredValue(null)
-    setPendingOperator(null)
-    setCalculationJob(null)
-    setIsWaitingForSecondValue(true)
-  }
-
   // Sadece geçmiş kayıtlarını temizlemek için ayrı bir fonksiyon.
   const clearHistory = () => {
     setHistory([])
@@ -912,13 +978,11 @@ function App() {
   const applyHistoryItem = (item: HistoryItem) => {
     setDisplayValue(item.result)
     setLastPressedValue(item.expression)
-    if (item.operator === 'expr') {
-      setExpressionInput(item.firstValue)
-    }
     setStoredValue(null)
     setPendingOperator(null)
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
   }
 
   // UI'da kullanıcıya hangi ikinci değerin beklendiğini anlatan kısa metin.
@@ -933,7 +997,7 @@ function App() {
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
-          : 'Rakam girip operatör seçebilir veya parantezli ifade alanını kullanabilirsin.'
+          : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
   useEffect(() => {
@@ -960,7 +1024,7 @@ function App() {
   // - i          => tersini alma (1/x)
   // - a          => mutlak değer (|x|)
   // - f          => faktöriyel (x!)
-  // - ( )        => parantezli ifade alanında kullanılabilir
+  // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
   // - Backspace  => son karakteri sil
   // - Enter / =  => sonucu hesapla
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
@@ -996,6 +1060,26 @@ function App() {
           event.preventDefault()
           setIsShortcutHelpOpen(false)
         }
+        return
+      }
+
+      const isExpressionTokenKey =
+        /^[0-9]$/.test(event.key) ||
+        event.key === '.' ||
+        event.key === ',' ||
+        event.key === '+' ||
+        event.key === '-' ||
+        event.key === '*' ||
+        event.key === '/' ||
+        event.key === '^' ||
+        event.key === '(' ||
+        event.key === ')'
+      const shouldWriteExpressionToken =
+        isExpressionInputActive || event.key === '(' || event.key === ')'
+
+      if (isExpressionTokenKey && shouldWriteExpressionToken) {
+        event.preventDefault()
+        appendExpressionToken(event.key)
         return
       }
 
@@ -1125,11 +1209,13 @@ function App() {
   }, [
     appendDecimal,
     appendDigit,
+    appendExpressionToken,
     backspaceDisplay,
     calculatorMode,
     clearAll,
     handleEqual,
     handleOperatorSelect,
+    isExpressionInputActive,
     isShortcutHelpOpen,
   ])
 
@@ -1205,37 +1291,6 @@ function App() {
         <p className="shortcut-hint">
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
-        <div className="expression-section">
-          <label className="expression-label" htmlFor="expression-input">
-            Parantezli ifade (örn: <code>(2+3)*4^2</code>)
-          </label>
-          <input
-            id="expression-input"
-            type="text"
-            className="expression-input"
-            value={expressionInput}
-            onChange={(event) => setExpressionInput(event.target.value)}
-            placeholder="(2+3)*(5-1)"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                handleExpressionCalculate()
-              }
-            }}
-          />
-          <div className="expression-actions">
-            <button type="button" className="expression-calculate" onClick={handleExpressionCalculate}>
-              İfadeyi Hesapla
-            </button>
-            <button
-              type="button"
-              className="expression-clear"
-              onClick={() => setExpressionInput('')}
-            >
-              İfadeyi Temizle
-            </button>
-          </div>
-        </div>
 
         {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
         <div className="keypad-layout">
@@ -1348,7 +1403,7 @@ function App() {
             className={`secondary ${activeVirtualKey === 'clear' ? 'key-pressed' : ''}`}
             onClick={clearAll}
           >
-            Temizle
+            C
           </button>
         </div>
       </main>
