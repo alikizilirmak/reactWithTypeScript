@@ -10,12 +10,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--history-width);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .calculator {
   width: 100%;
-  height: var(--panel-height);
+  min-height: var(--panel-height);
   padding: var(--panel-padding);
   border-radius: var(--panel-radius);
   background: #ffffff;
@@ -214,7 +214,7 @@
 /* Sağ panel: işlem geçmişi */
 .history {
   width: 100%;
-  height: var(--panel-height);
+  min-height: var(--panel-height);
   padding: var(--panel-padding);
   border-radius: var(--panel-radius);
   background: #ffffff;
@@ -321,10 +321,5 @@
   .app-layout {
     --panel-height: clamp(520px, 74vh, 700px);
     grid-template-columns: 1fr;
-  }
-
-  .calculator,
-  .history {
-    height: var(--panel-height);
   }
 }
