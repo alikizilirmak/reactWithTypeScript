@@ -22,7 +22,7 @@ type HistoryItem = {
 
 const HISTORY_STORAGE_KEY = 'calculator-history-v2'
 const THEME_STORAGE_KEY = 'calculator-theme-v1'
-const MAX_HISTORY_ITEMS = 15
+const MAX_HISTORY_ITEMS = 10
 const LEGACY_HISTORY_STORAGE_KEYS = ['calculator-history-v1', 'calculator-history'] as const
 const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   '+',
@@ -1431,7 +1431,7 @@ function App() {
         </div>
       </main>
 
-      {/* Sağdaki ayrı div: son 15 işlemin tarihçesi */}
+      {/* Sağdaki ayrı div: son 10 işlemin tarihçesi */}
       <aside className="history" aria-label="İşlem geçmişi">
         <div className="history-header">
           <h2>İşlem Geçmişi</h2>
