@@ -1047,7 +1047,7 @@ function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <h3>Klavye Kısayol Rehberi</h3>
-            <ul>
+            <ul className="shortcut-list">
               <li>
                 <kbd>0</kbd> - <kbd>9</kbd> : Sayı girişi
               </li>
@@ -1057,7 +1057,7 @@ function App() {
               <li>
                 <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> : 4 işlem
               </li>
-              <li>
+              <li className="shortcut-section">
                 <strong>Bilimsel kısayollar:</strong>
               </li>
               <li>
