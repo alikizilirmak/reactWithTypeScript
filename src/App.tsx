@@ -40,6 +40,32 @@ const isHistoryItem = (value: unknown): value is HistoryItem => {
   )
 }
 
+// localStorage okuma işini tek yerde topluyoruz.
+// useState'in başlangıç değerinde bunu kullanınca StrictMode'da ilk render yazımıyla
+// verinin boş diziye ezilmesi riskini de ortadan kaldırmış oluruz.
+const readHistoryFromStorage = (): HistoryItem[] => {
+  if (typeof window === 'undefined') {
+    return []
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(HISTORY_STORAGE_KEY)
+    if (!rawValue) {
+      return []
+    }
+
+    const parsedValue: unknown = JSON.parse(rawValue)
+    if (!Array.isArray(parsedValue)) {
+      return []
+    }
+
+    return parsedValue.filter(isHistoryItem).slice(0, 10)
+  } catch {
+    // localStorage verisi bozuksa boş geçmiş ile devam ederiz.
+    return []
+  }
+}
+
 // Hesaplama isteğini bir job olarak tutuyoruz.
 // Bu sayede hesaplamayı App dışındaki bir component tetikleyebiliyor.
 type CalculationJob = {
@@ -72,27 +98,7 @@ function App() {
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
-  const [history, setHistory] = useState<HistoryItem[]>([])
-
-  // History bilgisini sayfa yenilemelerinde kaybetmemek için localStorage'dan yüklüyoruz.
-  useEffect(() => {
-    try {
-      const rawValue = window.localStorage.getItem(HISTORY_STORAGE_KEY)
-      if (!rawValue) {
-        return
-      }
-
-      const parsedValue: unknown = JSON.parse(rawValue)
-      if (!Array.isArray(parsedValue)) {
-        return
-      }
-
-      const normalizedHistory = parsedValue.filter(isHistoryItem).slice(0, 10)
-      setHistory(normalizedHistory)
-    } catch {
-      // localStorage verisi bozuksa uygulamanın çalışmasını bozmayız.
-    }
-  }, [])
+  const [history, setHistory] = useState<HistoryItem[]>(() => readHistoryFromStorage())
 
   // History değiştikçe localStorage'a yazarak kalıcı hale getiriyoruz.
   useEffect(() => {
@@ -515,11 +521,12 @@ function App() {
   // - 0..9       => sayı girişi
   // - . ,        => ondalık ayırıcı
   // - + - * /    => temel 4 işlem
-  // - ^ %        => bilimsel operatörler
-  // - l          => ln operatörü
-  // - g          => log operatörü
-  // - r          => kök (√) operatörü
-  // - p          => binde (‰) operatörü
+  // - ^          => üs alma (x^n)
+  // - %          => yüzde hesabı
+  // - l          => ln(x)
+  // - g          => logaritma (tabanlı log)
+  // - r          => kök (n√x)
+  // - p          => binde (‰) hesabı
   // - Backspace  => son karakteri sil
   // - Enter / =  => sonucu hesapla
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
@@ -893,8 +900,25 @@ function App() {
                 <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> : 4 işlem
               </li>
               <li>
-                <kbd>^</kbd> <kbd>%</kbd> <kbd>L</kbd> <kbd>G</kbd> <kbd>R</kbd>{' '}
-                <kbd>P</kbd> : Bilimsel işlemler
+                <strong>Bilimsel kısayollar:</strong>
+              </li>
+              <li>
+                <kbd>^</kbd> : Üs alma (<code>x^n</code>)
+              </li>
+              <li>
+                <kbd>R</kbd> : Kök alma (<code>n√x</code>)
+              </li>
+              <li>
+                <kbd>L</kbd> : Doğal logaritma (<code>ln(x)</code>)
+              </li>
+              <li>
+                <kbd>G</kbd> : Tabanlı logaritma (<code>log(x)</code>)
+              </li>
+              <li>
+                <kbd>%</kbd> : Yüzde hesabı
+              </li>
+              <li>
+                <kbd>P</kbd> : Binde hesabı (<code>‰</code>)
               </li>
               <li>
                 <kbd>Backspace</kbd> : Son girilen rakamı sil
