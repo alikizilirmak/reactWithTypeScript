@@ -23,6 +23,7 @@
   display: grid;
   grid-template-rows: auto auto auto auto auto minmax(220px, 1fr) auto;
   row-gap: 0.55rem;
+  align-content: start;
   min-height: 0;
 }
 
@@ -136,8 +137,8 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 0.6rem;
+  align-self: start;
   min-height: 0;
-  height: 100%;
 }
 
 .number-pad,
@@ -397,6 +398,14 @@
   font-size: 0.95em;
   color: #111827;
   border: 1px solid #d1d5db;
+}
+
+.shortcut-modal code {
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  padding: 0.08rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
 }
 
 .shortcut-modal button {

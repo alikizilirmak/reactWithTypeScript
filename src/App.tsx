@@ -21,6 +21,19 @@ type HistoryItem = {
 }
 
 const HISTORY_STORAGE_KEY = 'calculator-history-v2'
+const LEGACY_HISTORY_STORAGE_KEYS = ['calculator-history-v1', 'calculator-history'] as const
+const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
+  '+',
+  '-',
+  '*',
+  '/',
+  '^',
+  '√',
+  '%',
+  '‰',
+  'log',
+  'ln',
+])
 
 // localStorage'dan okuduğumuz veriyi güvenli kullanmak için basit type guard.
 const isHistoryItem = (value: unknown): value is HistoryItem => {
@@ -34,10 +47,45 @@ const isHistoryItem = (value: unknown): value is HistoryItem => {
     typeof maybeItem.firstValue === 'string' &&
     typeof maybeItem.secondValue === 'string' &&
     typeof maybeItem.operator === 'string' &&
+    VALID_OPERATORS.has(maybeItem.operator as Operator) &&
     typeof maybeItem.result === 'string' &&
     typeof maybeItem.expression === 'string' &&
     typeof maybeItem.isError === 'boolean'
   )
+}
+
+// Eski sürüm history kayıtları için (isError alanı olmayan satırlar gibi)
+// toleranslı normalize fonksiyonu. Uyumlu formatı yeni shape'e çeviriyoruz.
+const normalizeHistoryItem = (value: unknown): HistoryItem | null => {
+  if (isHistoryItem(value)) {
+    return value
+  }
+
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const maybeItem = value as Partial<HistoryItem>
+  if (
+    typeof maybeItem.firstValue !== 'string' ||
+    typeof maybeItem.secondValue !== 'string' ||
+    typeof maybeItem.operator !== 'string' ||
+    !VALID_OPERATORS.has(maybeItem.operator as Operator) ||
+    typeof maybeItem.result !== 'string' ||
+    typeof maybeItem.expression !== 'string'
+  ) {
+    return null
+  }
+
+  return {
+    firstValue: maybeItem.firstValue,
+    secondValue: maybeItem.secondValue,
+    operator: maybeItem.operator as Operator,
+    result: maybeItem.result,
+    expression: maybeItem.expression,
+    // Eski kayıtlarda yoksa başarılı işlem kabul ediyoruz.
+    isError: typeof maybeItem.isError === 'boolean' ? maybeItem.isError : false,
+  }
 }
 
 // localStorage okuma işini tek yerde topluyoruz.
@@ -49,21 +97,32 @@ const readHistoryFromStorage = (): HistoryItem[] => {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(HISTORY_STORAGE_KEY)
-    if (!rawValue) {
-      return []
-    }
+    const candidateKeys = [HISTORY_STORAGE_KEY, ...LEGACY_HISTORY_STORAGE_KEYS]
+    for (const key of candidateKeys) {
+      const rawValue = window.localStorage.getItem(key)
+      if (!rawValue) {
+        continue
+      }
 
-    const parsedValue: unknown = JSON.parse(rawValue)
-    if (!Array.isArray(parsedValue)) {
-      return []
-    }
+      const parsedValue: unknown = JSON.parse(rawValue)
+      if (!Array.isArray(parsedValue)) {
+        continue
+      }
 
-    return parsedValue.filter(isHistoryItem).slice(0, 10)
+      const normalizedHistory = parsedValue
+        .map(normalizeHistoryItem)
+        .filter((item): item is HistoryItem => item !== null)
+        .slice(0, 10)
+
+      if (normalizedHistory.length > 0) {
+        return normalizedHistory
+      }
+    }
   } catch {
     // localStorage verisi bozuksa boş geçmiş ile devam ederiz.
-    return []
   }
+
+  return []
 }
 
 // Hesaplama isteğini bir job olarak tutuyoruz.
@@ -906,19 +965,19 @@ function App() {
                 <kbd>^</kbd> : Üs alma (<code>x^n</code>)
               </li>
               <li>
-                <kbd>R</kbd> : Kök alma (<code>n√x</code>)
+                <kbd>R</kbd> : Kök alma (<code>n√x</code>) — 2. sayı derece
               </li>
               <li>
                 <kbd>L</kbd> : Doğal logaritma (<code>ln(x)</code>)
               </li>
               <li>
-                <kbd>G</kbd> : Tabanlı logaritma (<code>log(x)</code>)
+                <kbd>G</kbd> : Tabanlı logaritma (<code>log(x)</code>) — 2. sayı taban
               </li>
               <li>
-                <kbd>%</kbd> : Yüzde hesabı
+                <kbd>%</kbd> : Yüzde hesabı — 2. sayı oran
               </li>
               <li>
-                <kbd>P</kbd> : Binde hesabı (<code>‰</code>)
+                <kbd>P</kbd> : Binde hesabı (<code>‰</code>) — 2. sayı oran
               </li>
               <li>
                 <kbd>Backspace</kbd> : Son girilen rakamı sil
