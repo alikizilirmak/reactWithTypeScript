@@ -20,6 +20,26 @@ type HistoryItem = {
   isError: boolean
 }
 
+const HISTORY_STORAGE_KEY = 'calculator-history-v2'
+
+// localStorage'dan okuduğumuz veriyi güvenli kullanmak için basit type guard.
+const isHistoryItem = (value: unknown): value is HistoryItem => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const maybeItem = value as Partial<HistoryItem>
+
+  return (
+    typeof maybeItem.firstValue === 'string' &&
+    typeof maybeItem.secondValue === 'string' &&
+    typeof maybeItem.operator === 'string' &&
+    typeof maybeItem.result === 'string' &&
+    typeof maybeItem.expression === 'string' &&
+    typeof maybeItem.isError === 'boolean'
+  )
+}
+
 // Hesaplama isteğini bir job olarak tutuyoruz.
 // Bu sayede hesaplamayı App dışındaki bir component tetikleyebiliyor.
 type CalculationJob = {
@@ -42,6 +62,7 @@ function App() {
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('basic')
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
@@ -52,6 +73,35 @@ function App() {
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
   const [history, setHistory] = useState<HistoryItem[]>([])
+
+  // History bilgisini sayfa yenilemelerinde kaybetmemek için localStorage'dan yüklüyoruz.
+  useEffect(() => {
+    try {
+      const rawValue = window.localStorage.getItem(HISTORY_STORAGE_KEY)
+      if (!rawValue) {
+        return
+      }
+
+      const parsedValue: unknown = JSON.parse(rawValue)
+      if (!Array.isArray(parsedValue)) {
+        return
+      }
+
+      const normalizedHistory = parsedValue.filter(isHistoryItem).slice(0, 10)
+      setHistory(normalizedHistory)
+    } catch {
+      // localStorage verisi bozuksa uygulamanın çalışmasını bozmayız.
+    }
+  }, [])
+
+  // History değiştikçe localStorage'a yazarak kalıcı hale getiriyoruz.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history))
+    } catch {
+      // Tarayıcı depolama hatası olsa da uygulama çalışmaya devam etsin.
+    }
+  }, [history])
 
   // "null" değeri burada "henüz geçerli bir sayı yok" anlamında kullanılıyor.
   // Regex + Number kontrolü ile güvenli parse yapıyoruz.
@@ -289,6 +339,32 @@ function App() {
     setLastPressedValue(nextValue)
   }
 
+  // Backspace davranışı: son girilen karakteri siler.
+  const backspaceDisplay = () => {
+    if (isWaitingForSecondValue) {
+      return
+    }
+
+    if (parseNumberInput(displayValue) === null) {
+      setDisplayValue('0')
+      return
+    }
+
+    if (displayValue.length <= 1) {
+      setDisplayValue('0')
+      return
+    }
+
+    const nextValue = displayValue.slice(0, -1)
+    if (nextValue === '' || nextValue === '-') {
+      setDisplayValue('0')
+      return
+    }
+
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
+  }
+
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
@@ -436,16 +512,18 @@ function App() {
   }, [])
 
   // Klavye desteği:
-  // - 0..9    => sayı girişi
-  // - . ,     => ondalık ayırıcı
-  // - + - * / => temel 4 işlem
-  // - ^ %     => bilimsel operatörler
-  // - l       => ln operatörü
-  // - g       => log operatörü
-  // - r       => kök (√) operatörü
-  // - p       => binde (‰) operatörü
-  // - Enter/= => sonucu hesapla
-  // - Escape  => temizle
+  // - 0..9       => sayı girişi
+  // - . ,        => ondalık ayırıcı
+  // - + - * /    => temel 4 işlem
+  // - ^ %        => bilimsel operatörler
+  // - l          => ln operatörü
+  // - g          => log operatörü
+  // - r          => kök (√) operatörü
+  // - p          => binde (‰) operatörü
+  // - Backspace  => son karakteri sil
+  // - Enter / =  => sonucu hesapla
+  // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
+  // - H / ?      => mini klavye kısayol rehberini aç/kapat
   // Not: Ctrl/Meta/Alt kombinasyonlarını özellikle yakalamıyoruz.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -463,6 +541,23 @@ function App() {
         return
       }
 
+      const lowerKey = event.key.toLowerCase()
+      const isHelpToggleKey = event.key === '?' || lowerKey === 'h'
+
+      if (isHelpToggleKey) {
+        event.preventDefault()
+        setIsShortcutHelpOpen((previousState) => !previousState)
+        return
+      }
+
+      if (isShortcutHelpOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          setIsShortcutHelpOpen(false)
+        }
+        return
+      }
+
       if (/^[0-9]$/.test(event.key)) {
         event.preventDefault()
         appendDigit(event.key)
@@ -474,6 +569,12 @@ function App() {
         event.preventDefault()
         appendDecimal()
         flashVirtualKey('.')
+        return
+      }
+
+      if (event.key === 'Backspace') {
+        event.preventDefault()
+        backspaceDisplay()
         return
       }
 
@@ -507,7 +608,6 @@ function App() {
         return
       }
 
-      const lowerKey = event.key.toLowerCase()
       if (lowerKey === 'l') {
         event.preventDefault()
         handleOperatorSelect('ln')
@@ -541,10 +641,12 @@ function App() {
   }, [
     appendDecimal,
     appendDigit,
+    backspaceDisplay,
     calculatorMode,
     clearAll,
     handleEqual,
     handleOperatorSelect,
+    isShortcutHelpOpen,
   ])
 
   return (
@@ -610,6 +712,9 @@ function App() {
             Bilimsel Hesap Makinesi
           </button>
         </div>
+        <p className="shortcut-hint">
+          Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
+        </p>
 
         {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
         <div className="keypad-layout">
@@ -761,6 +866,55 @@ function App() {
           )}
         </div>
       </aside>
+
+      {/* H veya ? ile açılan mini kısayol rehberi */}
+      {isShortcutHelpOpen && (
+        <div
+          className="shortcut-backdrop"
+          role="presentation"
+          onClick={() => setIsShortcutHelpOpen(false)}
+        >
+          <div
+            className="shortcut-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Klavye kısayol rehberi"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3>Klavye Kısayol Rehberi</h3>
+            <ul>
+              <li>
+                <kbd>0</kbd> - <kbd>9</kbd> : Sayı girişi
+              </li>
+              <li>
+                <kbd>.</kbd> / <kbd>,</kbd> : Ondalık ayırıcı
+              </li>
+              <li>
+                <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> : 4 işlem
+              </li>
+              <li>
+                <kbd>^</kbd> <kbd>%</kbd> <kbd>L</kbd> <kbd>G</kbd> <kbd>R</kbd>{' '}
+                <kbd>P</kbd> : Bilimsel işlemler
+              </li>
+              <li>
+                <kbd>Backspace</kbd> : Son girilen rakamı sil
+              </li>
+              <li>
+                <kbd>Enter</kbd> / <kbd>=</kbd> : Hesapla
+              </li>
+              <li>
+                <kbd>Escape</kbd> : Temizle (rehber açıksa önce rehberi kapatır)
+              </li>
+              <li>
+                <kbd>H</kbd> veya <kbd>?</kbd> : Rehberi aç / kapat
+              </li>
+            </ul>
+            <button type="button" onClick={() => setIsShortcutHelpOpen(false)}>
+              Kapat
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
