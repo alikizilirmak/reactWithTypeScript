@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { CalculationComponent } from './components/calculation/CalculationComponent'
 import {
@@ -44,8 +44,10 @@ function App() {
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>('basic')
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
+  const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
+  const keyFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
@@ -146,6 +148,19 @@ function App() {
       resultText,
       isError,
     )
+  }
+
+  // Klavyeden bir tuşa basılınca ilgili butonu kısa süre "basılmış" gibi gösteriyoruz.
+  const flashVirtualKey = (key: string) => {
+    setActiveVirtualKey(key)
+
+    if (keyFlashTimeoutRef.current) {
+      clearTimeout(keyFlashTimeoutRef.current)
+    }
+
+    keyFlashTimeoutRef.current = setTimeout(() => {
+      setActiveVirtualKey(null)
+    }, 120)
   }
 
   // Hesaplama job'ı oluştururken benzersiz id veriyoruz.
@@ -411,6 +426,117 @@ function App() {
           ? 'Seçili işlem oran bekliyor.'
           : 'Rakam girip bir operatör seçebilirsin.'
 
+  // Component kapanırken bekleyen timeout'u temizliyoruz.
+  useEffect(() => {
+    return () => {
+      if (keyFlashTimeoutRef.current) {
+        clearTimeout(keyFlashTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Klavye desteği:
+  // sayı/operatör/enter ile hesap yapabiliriz, escape ile temizleyebiliriz.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault()
+        appendDigit(event.key)
+        flashVirtualKey(event.key)
+        return
+      }
+
+      if (event.key === '.' || event.key === ',') {
+        event.preventDefault()
+        appendDecimal()
+        flashVirtualKey('.')
+        return
+      }
+
+      if (event.key === 'Enter' || event.key === '=') {
+        event.preventDefault()
+        handleEqual()
+        flashVirtualKey('=')
+        return
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        clearAll()
+        flashVirtualKey('clear')
+        return
+      }
+
+      const operatorMap: Record<string, Operator> = {
+        '+': '+',
+        '-': '-',
+        '*': '*',
+        '/': '/',
+        '^': '^',
+        '%': '%',
+      }
+
+      if (operatorMap[event.key]) {
+        event.preventDefault()
+        handleOperatorSelect(operatorMap[event.key])
+        flashVirtualKey(operatorMap[event.key])
+        return
+      }
+
+      const lowerKey = event.key.toLowerCase()
+      if (lowerKey === 'l') {
+        event.preventDefault()
+        handleOperatorSelect('ln')
+        flashVirtualKey('ln')
+        return
+      }
+
+      if (lowerKey === 'g') {
+        event.preventDefault()
+        handleOperatorSelect('log')
+        flashVirtualKey('log')
+        return
+      }
+
+      if (lowerKey === 'r') {
+        event.preventDefault()
+        handleOperatorSelect('√')
+        flashVirtualKey('√')
+        return
+      }
+
+      if (lowerKey === 'p') {
+        event.preventDefault()
+        handleOperatorSelect('‰')
+        flashVirtualKey('‰')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    appendDecimal,
+    appendDigit,
+    calculatorMode,
+    clearAll,
+    handleEqual,
+    handleOperatorSelect,
+  ])
+
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
     <div className="app-layout">
@@ -478,40 +604,88 @@ function App() {
         {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
         <div className="keypad-layout">
           <div className="number-pad">
-            <button type="button" onClick={() => appendDigit('7')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '7' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('7')}
+            >
               7
             </button>
-            <button type="button" onClick={() => appendDigit('8')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '8' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('8')}
+            >
               8
             </button>
-            <button type="button" onClick={() => appendDigit('9')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '9' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('9')}
+            >
               9
             </button>
-            <button type="button" onClick={() => appendDigit('4')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '4' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('4')}
+            >
               4
             </button>
-            <button type="button" onClick={() => appendDigit('5')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '5' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('5')}
+            >
               5
             </button>
-            <button type="button" onClick={() => appendDigit('6')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '6' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('6')}
+            >
               6
             </button>
-            <button type="button" onClick={() => appendDigit('1')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '1' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('1')}
+            >
               1
             </button>
-            <button type="button" onClick={() => appendDigit('2')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '2' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('2')}
+            >
               2
             </button>
-            <button type="button" onClick={() => appendDigit('3')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '3' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('3')}
+            >
               3
             </button>
-            <button type="button" onClick={toggleSign}>
+            <button
+              type="button"
+              className={activeVirtualKey === '±' ? 'key-pressed' : ''}
+              onClick={toggleSign}
+            >
               ±
             </button>
-            <button type="button" onClick={() => appendDigit('0')}>
+            <button
+              type="button"
+              className={activeVirtualKey === '0' ? 'key-pressed' : ''}
+              onClick={() => appendDigit('0')}
+            >
               0
             </button>
-            <button type="button" onClick={appendDecimal}>
+            <button
+              type="button"
+              className={activeVirtualKey === '.' ? 'key-pressed' : ''}
+              onClick={appendDecimal}
+            >
               .
             </button>
           </div>
@@ -526,10 +700,18 @@ function App() {
         </div>
 
         <div className="actions">
-          <button type="button" className="equal" onClick={handleEqual}>
+          <button
+            type="button"
+            className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
+            onClick={handleEqual}
+          >
             =
           </button>
-          <button type="button" className="secondary" onClick={clearAll}>
+          <button
+            type="button"
+            className={`secondary ${activeVirtualKey === 'clear' ? 'key-pressed' : ''}`}
+            onClick={clearAll}
+          >
             Temizle
           </button>
         </div>

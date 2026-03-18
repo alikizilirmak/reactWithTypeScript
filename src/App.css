@@ -166,6 +166,14 @@
   background: #f3f4f6;
 }
 
+.number-pad button.key-pressed,
+.operator-button.key-pressed {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+  transform: translateY(1px);
+}
+
 .operator-button.active {
   border-color: #93c5fd;
   background: #dbeafe;
@@ -194,6 +202,10 @@
   background: #1d4ed8;
 }
 
+.actions button.key-pressed {
+  transform: translateY(1px);
+}
+
 .actions .equal {
   background: #0f766e;
 }
@@ -208,6 +220,10 @@
 }
 
 .actions .secondary:hover {
+  background: #d1d5db;
+}
+
+.actions .secondary.key-pressed {
   background: #d1d5db;
 }
 
