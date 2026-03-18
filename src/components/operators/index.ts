@@ -1,6 +1,7 @@
 import { calculateAbsolute } from './AbsoluteOperator'
 import { calculateAddition } from './AdditionOperator'
 import { calculateDivision } from './DivisionOperator'
+import { calculateExp } from './ExpOperator'
 import { calculateFactorial } from './FactorialOperator'
 import { calculateLn } from './LnOperator'
 import { calculateLog } from './LogOperator'
@@ -30,6 +31,7 @@ export const operatorCalculators: Record<Operator, OperationCalculator> = {
   '/': calculateDivision,
   log: calculateLog,
   ln: calculateLn,
+  'e^x': calculateExp,
   'x²': calculateSquare,
   '1/x': calculateReciprocal,
   '|x|': calculateAbsolute,

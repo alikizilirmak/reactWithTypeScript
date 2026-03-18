@@ -34,6 +34,7 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   '‰',
   'log',
   'ln',
+  'e^x',
   'x²',
   '1/x',
   '|x|',
@@ -42,6 +43,7 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
 ])
 const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
   'ln',
+  'e^x',
   'x²',
   '1/x',
   '|x|',
@@ -213,6 +215,10 @@ function App() {
   ): string => {
     if (selectedOperator === 'ln') {
       return `ln(${first}) = ${resultText}`
+    }
+
+    if (selectedOperator === 'e^x') {
+      return `e^(${first}) = ${resultText}`
     }
 
     if (selectedOperator === 'x²') {
@@ -623,6 +629,7 @@ function App() {
   // - . ,        => ondalık ayırıcı
   // - + - * /    => temel 4 işlem
   // - ^          => üs alma (x^n)
+  // - e          => e^x hesabı
   // - %          => yüzde hesabı
   // - m          => mod alma
   // - l          => ln(x)
@@ -728,6 +735,13 @@ function App() {
         return
       }
 
+      if (lowerKey === 'e') {
+        event.preventDefault()
+        handleOperatorSelect('e^x')
+        flashVirtualKey('e^x')
+        return
+      }
+
       if (lowerKey === 'g') {
         event.preventDefault()
         handleOperatorSelect('log')
@@ -781,6 +795,7 @@ function App() {
         event.preventDefault()
         handleOperatorSelect('x!')
         flashVirtualKey('x!')
+        return
       }
     }
 
@@ -828,10 +843,10 @@ function App() {
 
       {/* Uygulamanın hesaplama tarafı */}
       <main className="calculator">
-        <h1>Hesap Makinesi</h1>
+        <h1>calculatorWithReact</h1>
         <p className="subtitle">
-          Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, yüzde, binde,
-          kare, ters, mutlak değer, faktöriyel ve mod
+          Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
+          binde, kare, ters, mutlak değer, faktöriyel ve mod
         </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
@@ -1053,6 +1068,9 @@ function App() {
               </li>
               <li>
                 <kbd>L</kbd> : Doğal logaritma (<code>ln(x)</code>)
+              </li>
+              <li>
+                <kbd>E</kbd> : Üstel fonksiyon (<code>e^x</code>)
               </li>
               <li>
                 <kbd>G</kbd> : Tabanlı logaritma (<code>log(x)</code>) — 2. sayı taban

@@ -1,6 +1,7 @@
 import { AbsoluteOperatorButton } from './AbsoluteOperator'
 import { AdditionOperatorButton } from './AdditionOperator'
 import { DivisionOperatorButton } from './DivisionOperator'
+import { ExpOperatorButton } from './ExpOperator'
 import { FactorialOperatorButton } from './FactorialOperator'
 import { LnOperatorButton } from './LnOperator'
 import { LogOperatorButton } from './LogOperator'
@@ -42,6 +43,7 @@ export function OperatorButtons({
           <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
           <LogOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
           <LnOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+          <ExpOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
           <SquareOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
           <ReciprocalOperatorButton
             onSelect={onSelect}

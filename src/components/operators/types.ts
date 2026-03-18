@@ -12,6 +12,7 @@ export type Operator =
   | 'log'
   | 'ln'
   | 'x²'
+  | 'e^x'
   | '1/x'
   | '|x|'
   | 'x!'
