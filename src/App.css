@@ -2,7 +2,7 @@
 .app-layout {
   width: min(1080px, 96vw);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 360px);
   gap: 1rem;
   align-items: start;
 }
@@ -209,7 +209,7 @@
 .history {
   width: 100%;
   height: clamp(560px, 78vh, 760px);
-  padding: 1.25rem;
+  padding: clamp(1rem, 1.4vw, 1.35rem);
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
@@ -226,14 +226,14 @@
 
 .history h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: clamp(1.05rem, 1.1vw, 1.2rem);
 }
 
 .clear-history {
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.85rem;
+  padding: clamp(0.4rem, 0.6vw, 0.5rem) clamp(0.5rem, 0.9vw, 0.7rem);
+  font-size: clamp(0.78rem, 0.8vw, 0.88rem);
   background: #f3f4f6;
   color: #111827;
   cursor: pointer;
@@ -250,7 +250,7 @@
 }
 
 .history-content {
-  margin-top: 0.8rem;
+  margin-top: clamp(0.6rem, 1vw, 0.85rem);
   flex: 1;
   overflow-y: auto;
   padding-right: 0.2rem;
@@ -275,7 +275,8 @@
   border-radius: 0.45rem;
   background: #f9fafb;
   color: #111827;
-  padding: 0.45rem 0.55rem;
+  padding: clamp(0.4rem, 0.75vw, 0.55rem) clamp(0.5rem, 1vw, 0.65rem);
+  font-size: clamp(0.84rem, 0.95vw, 0.95rem);
   cursor: pointer;
   word-break: break-word;
 }
