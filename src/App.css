@@ -14,6 +14,8 @@
 }
 
 .calculator {
+  --scientific-keypad-height: calc(8 * 30px + 7 * 0.5rem);
+
   width: 100%;
   min-height: var(--panel-height);
   padding: var(--panel-padding);
@@ -138,21 +140,21 @@
   grid-template-columns: 2fr 1fr;
   gap: 0.6rem;
   align-self: start;
-  align-items: start;
-  min-height: 0;
+  align-items: stretch;
+  min-height: var(--scientific-keypad-height);
 }
 
 .number-pad,
 .operator-pad {
   display: grid;
   gap: 0.5rem;
+  height: 100%;
   min-height: 0;
 }
 
 .number-pad {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(36px, 1fr));
-  align-self: start;
 }
 
 .operator-pad {
@@ -444,5 +446,9 @@
   .app-layout {
     --panel-height: clamp(520px, 74vh, 700px);
     grid-template-columns: 1fr;
+  }
+
+  .calculator {
+    --scientific-keypad-height: calc(8 * 28px + 7 * 0.45rem);
   }
 }
