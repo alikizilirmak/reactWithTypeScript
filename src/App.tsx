@@ -1025,6 +1025,7 @@ function App() {
   // - a          => mutlak değer (|x|)
   // - f          => faktöriyel (x!)
   // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
+  // - c          => C (temizle)
   // - Backspace  => son karakteri sil
   // - Enter / =  => sonucu hesapla
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
@@ -1063,6 +1064,13 @@ function App() {
         return
       }
 
+      if (lowerKey === 'c') {
+        event.preventDefault()
+        clearAll()
+        flashVirtualKey('clear')
+        return
+      }
+
       const isExpressionTokenKey =
         /^[0-9]$/.test(event.key) ||
         event.key === '.' ||
@@ -1080,6 +1088,7 @@ function App() {
       if (isExpressionTokenKey && shouldWriteExpressionToken) {
         event.preventDefault()
         appendExpressionToken(event.key)
+        flashVirtualKey(event.key === ',' ? '.' : event.key)
         return
       }
 
@@ -1393,6 +1402,13 @@ function App() {
         <div className="actions">
           <button
             type="button"
+            className={`paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
+            onClick={() => appendExpressionToken('(')}
+          >
+            (
+          </button>
+          <button
+            type="button"
             className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
             onClick={handleEqual}
           >
@@ -1404,6 +1420,13 @@ function App() {
             onClick={clearAll}
           >
             C
+          </button>
+          <button
+            type="button"
+            className={`paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
+            onClick={() => appendExpressionToken(')')}
+          >
+            )
           </button>
         </div>
       </main>
@@ -1519,6 +1542,9 @@ function App() {
               </li>
               <li>
                 <kbd>Escape</kbd> : Temizle (rehber açıksa önce rehberi kapatır)
+              </li>
+              <li>
+                <kbd>C</kbd> : C butonu (temizle)
               </li>
               <li>
                 <kbd>H</kbd> veya <kbd>?</kbd> : Rehberi aç / kapat
