@@ -1415,157 +1415,147 @@ function App() {
 
         {/* Bilimsel operatör + sabitler sayıların üstünde, hafıza + 4 işlem yan tarafta */}
         <div className="keypad-layout">
-          <div className="keypad-main">
-            <div className="scientific-and-constants">
-              <div className="scientific-operator-pad">
-                <ScientificOperatorButtons
-                  onSelect={handleOperatorSelect}
-                  activeOperator={pendingOperator}
-                />
-              </div>
-              <div className="constants-pad" role="group" aria-label="Sabit değer tuşları">
-                <button
-                  type="button"
-                  className="utility-button constant"
-                  onClick={usePiValue}
-                >
-                  π
-                </button>
-                <button
-                  type="button"
-                  className="utility-button constant"
-                  onClick={useEulerValue}
-                >
-                  e
-                </button>
-                <button
-                  type="button"
-                  className="utility-button ans"
-                  onClick={useAnswerValue}
-                  disabled={lastAnswerValue === null}
-                >
-                  ANS
-                </button>
-              </div>
+          <div className="scientific-and-constants">
+            <div className="scientific-operator-pad">
+              <ScientificOperatorButtons
+                onSelect={handleOperatorSelect}
+                activeOperator={pendingOperator}
+              />
             </div>
+            <div className="constants-pad" role="group" aria-label="Sabit değer tuşları">
+              <button type="button" className="operator-button" onClick={usePiValue}>
+                π
+              </button>
+              <button type="button" className="operator-button" onClick={useEulerValue}>
+                e
+              </button>
+              <button
+                type="button"
+                className="operator-button"
+                onClick={useAnswerValue}
+                disabled={lastAnswerValue === null}
+              >
+                ANS
+              </button>
+            </div>
+          </div>
 
-            <div className="keypad-left">
-              <div className="number-pad">
-                <button
-                  type="button"
-                  className={activeVirtualKey === '7' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('7')}
-                >
-                  7
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '8' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('8')}
-                >
-                  8
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '9' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('9')}
-                >
-                  9
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '4' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('4')}
-                >
-                  4
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '5' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('5')}
-                >
-                  5
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '6' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('6')}
-                >
-                  6
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '1' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('1')}
-                >
-                  1
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '2' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('2')}
-                >
-                  2
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '3' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('3')}
-                >
-                  3
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '±' ? 'key-pressed' : ''}
-                  onClick={toggleSign}
-                >
-                  ±
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '0' ? 'key-pressed' : ''}
-                  onClick={() => appendDigit('0')}
-                >
-                  0
-                </button>
-                <button
-                  type="button"
-                  className={activeVirtualKey === '.' ? 'key-pressed' : ''}
-                  onClick={appendDecimal}
-                >
-                  .
-                </button>
-              </div>
-              <div className="actions">
-                <button
-                  type="button"
-                  className={`paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
-                  onClick={() => appendExpressionToken('(')}
-                >
-                  (
-                </button>
-                <button
-                  type="button"
-                  className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
-                  onClick={handleEqual}
-                >
-                  =
-                </button>
-                <button
-                  type="button"
-                  className={`secondary ${activeVirtualKey === 'clear' ? 'key-pressed' : ''}`}
-                  onClick={clearAll}
-                >
-                  C
-                </button>
-                <button
-                  type="button"
-                  className={`paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
-                  onClick={() => appendExpressionToken(')')}
-                >
-                  )
-                </button>
-              </div>
+          <div className="keypad-left">
+            <div className="number-pad">
+              <button
+                type="button"
+                className={activeVirtualKey === '7' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('7')}
+              >
+                7
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '8' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('8')}
+              >
+                8
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '9' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('9')}
+              >
+                9
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '4' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('4')}
+              >
+                4
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '5' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('5')}
+              >
+                5
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '6' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('6')}
+              >
+                6
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '1' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('1')}
+              >
+                1
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '2' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('2')}
+              >
+                2
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '3' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('3')}
+              >
+                3
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '±' ? 'key-pressed' : ''}
+                onClick={toggleSign}
+              >
+                ±
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '0' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('0')}
+              >
+                0
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '.' ? 'key-pressed' : ''}
+                onClick={appendDecimal}
+              >
+                .
+              </button>
+            </div>
+            <div className="actions">
+              <button
+                type="button"
+                className={`paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
+                onClick={() => appendExpressionToken('(')}
+              >
+                (
+              </button>
+              <button
+                type="button"
+                className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
+                onClick={handleEqual}
+              >
+                =
+              </button>
+              <button
+                type="button"
+                className={`secondary ${activeVirtualKey === 'clear' ? 'key-pressed' : ''}`}
+                onClick={clearAll}
+              >
+                C
+              </button>
+              <button
+                type="button"
+                className={`paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
+                onClick={() => appendExpressionToken(')')}
+              >
+                )
+              </button>
             </div>
           </div>
 
