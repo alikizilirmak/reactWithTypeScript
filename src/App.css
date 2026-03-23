@@ -209,7 +209,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
   grid-template-rows: auto auto auto;
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-self: start;
   align-items: start;
   min-height: 0;
@@ -224,7 +224,7 @@
 .memory-pad,
 .basic-operator-pad {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
   min-height: 0;
 }
 
@@ -259,7 +259,7 @@
   grid-column: 1;
   grid-row: 2;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(4, minmax(33px, 1fr));
+  grid-template-rows: repeat(4, minmax(31px, 1fr));
 }
 
 .actions {
@@ -271,22 +271,22 @@
   grid-column: 2;
   grid-row: 2;
   grid-template-rows: auto auto;
-  align-self: start;
+  align-self: end;
 }
 
 .memory-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(33px, 1fr));
+  grid-template-rows: repeat(2, minmax(31px, 1fr));
 }
 
 .basic-operator-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(33px, 1fr));
+  grid-template-rows: repeat(2, minmax(31px, 1fr));
 }
 
 .memory-pad .utility-button,
 .basic-operator-pad .operator-button {
-  min-height: 33px;
+  min-height: 31px;
   height: 100%;
 }
 
@@ -299,7 +299,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  min-height: 33px;
+  min-height: 31px;
   height: 100%;
 }
 
