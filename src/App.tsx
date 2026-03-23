@@ -418,7 +418,6 @@ function App() {
   const [lastPressedValue, setLastPressedValue] = useState<string>('')
   const [storedValue, setStoredValue] = useState<number | null>(null)
   const [memoryValue, setMemoryValue] = useState<number | null>(null)
-  const [lastAnswerValue, setLastAnswerValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
@@ -476,13 +475,13 @@ function App() {
   }
 
   // Hesap makinesinde kullanacağımız sayıları "ekran dostu" kısa formata çevirir.
-  // Böylece pi/e/ANS gibi değerler gereksiz uzun görünmez.
+  // Böylece pi/e gibi değerler gereksiz uzun görünmez.
   const formatNumberForDisplay = (value: number): string => {
     const normalizedValue = Number.parseFloat(value.toPrecision(12))
     return Number.isFinite(normalizedValue) ? normalizedValue.toString() : value.toString()
   }
 
-  // Pi, e ve ANS gibi hazır sayıları ekrana yerleştirmek için ortak yardımcı.
+  // Pi ve e gibi hazır sayıları ekrana yerleştirmek için ortak yardımcı.
   const usePreparedNumber = (value: number, pressedLabel: string) => {
     const formattedValue = formatNumberForDisplay(value)
 
@@ -682,12 +681,6 @@ function App() {
   ) => {
     // ResultText'i her durumda ekrana basıyoruz (hata mesajı da olabilir).
     setDisplayValue(resultText)
-    if (!isError) {
-      const parsedResult = parseNumberInput(resultText)
-      if (parsedResult !== null) {
-        setLastAnswerValue(parsedResult)
-      }
-    }
     addToHistory(
       finishedJob.first,
       finishedJob.second,
@@ -947,13 +940,6 @@ function App() {
       setLastPressedValue(expressionText)
       addExpressionToHistory(expressionText, resultText, isError)
 
-      if (!isError) {
-        const parsedResult = parseNumberInput(resultText)
-        if (parsedResult !== null) {
-          setLastAnswerValue(parsedResult)
-        }
-      }
-
       setStoredValue(null)
       setPendingOperator(null)
       setCalculationJob(null)
@@ -1049,15 +1035,6 @@ function App() {
     usePreparedNumber(Math.E, 'e')
   }
 
-  const useAnswerValue = () => {
-    if (lastAnswerValue === null) {
-      setDisplayValue('Henüz ANS değeri yok.')
-      return
-    }
-
-    usePreparedNumber(lastAnswerValue, 'ANS')
-  }
-
   const toggleThemeMode = () => {
     setThemeMode((previousTheme) => (previousTheme === 'light' ? 'dark' : 'light'))
   }
@@ -1071,10 +1048,6 @@ function App() {
   const applyHistoryItem = (item: HistoryItem) => {
     setDisplayValue(item.result)
     setLastPressedValue(item.expression)
-    const parsedResult = parseNumberInput(item.result)
-    if (parsedResult !== null) {
-      setLastAnswerValue(parsedResult)
-    }
     setStoredValue(null)
     setPendingOperator(null)
     setCalculationJob(null)
@@ -1431,14 +1404,6 @@ function App() {
               </button>
               <button
                 type="button"
-                className="operator-button ans"
-                onClick={useAnswerValue}
-                disabled={lastAnswerValue === null}
-              >
-                ANS
-              </button>
-              <button
-                type="button"
                 className={`operator-button paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
                 onClick={() => appendExpressionToken('(')}
               >
@@ -1756,9 +1721,6 @@ function App() {
               </li>
               <li>
                 <kbd>π</kbd> / <kbd>e</kbd> : Sabit sayıları ekrana yazar
-              </li>
-              <li>
-                <kbd>ANS</kbd> : Son başarılı sonucu tekrar kullanır
               </li>
               <li>
                 <kbd>Backspace</kbd> : Son girilen rakamı sil

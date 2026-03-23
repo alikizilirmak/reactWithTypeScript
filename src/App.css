@@ -175,7 +175,7 @@
   font-weight: 700;
   padding: 0.45rem 0.35rem;
   cursor: pointer;
-  min-height: 34px;
+  min-height: 40px;
 }
 
 .utility-button:hover {
@@ -230,14 +230,14 @@
 }
 
 .constants-pad {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(36px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(40px, 1fr));
 }
 
 .scientific-operator-pad .operator-button,
 .constants-pad .operator-button {
-  min-height: 36px;
-  padding: 0.45rem 0.3rem;
+  min-height: 40px;
+  padding: 0.55rem 0.35rem;
   font-size: 0.84rem;
 }
 
@@ -252,12 +252,6 @@
   color: #1d4ed8;
 }
 
-.constants-pad .ans {
-  border-color: #99f6e4;
-  background: #ecfeff;
-  color: #0f766e;
-}
-
 .constants-pad .paren {
   border-color: #d1d5db;
   background: #f3f4f6;
@@ -270,7 +264,7 @@
 
 .number-pad {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(4, minmax(36px, 1fr));
+  grid-template-rows: repeat(4, minmax(40px, 1fr));
 }
 
 .side-operations {
@@ -280,17 +274,17 @@
 
 .memory-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(36px, 1fr));
+  grid-template-rows: repeat(2, minmax(40px, 1fr));
 }
 
 .basic-operator-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(36px, 1fr));
+  grid-template-rows: repeat(2, minmax(40px, 1fr));
 }
 
 .memory-pad .utility-button,
 .basic-operator-pad .operator-button {
-  min-height: 36px;
+  min-height: 40px;
   height: 100%;
 }
 
@@ -303,7 +297,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  min-height: 36px;
+  min-height: 40px;
   height: 100%;
 }
 
@@ -337,7 +331,7 @@
   border: none;
   border-radius: 0.55rem;
   padding: 0.82rem 0.6rem;
-  min-height: 42px;
+  min-height: 50px;
   font-size: 0.95rem;
   font-weight: 600;
   color: #ffffff;
@@ -738,12 +732,6 @@
   color: #dbeafe;
 }
 
-.app-layout.theme-dark .constants-pad .ans {
-  border-color: #0f766e;
-  background: #134e4a;
-  color: #99f6e4;
-}
-
 .app-layout.theme-dark .constants-pad .paren {
   border-color: #4b5563;
   background: #374151;
@@ -799,7 +787,7 @@
 
   .basic-operator-pad {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(34px, 1fr));
+    grid-template-rows: repeat(2, minmax(38px, 1fr));
   }
 
   .history-filters {
