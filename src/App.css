@@ -208,7 +208,7 @@
 .keypad-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   gap: 0.6rem;
   align-self: start;
   align-items: start;
@@ -218,8 +218,8 @@
 .scientific-and-constants,
 .scientific-operator-pad,
 .constants-pad,
-.keypad-left,
 .number-pad,
+.actions,
 .side-operations,
 .memory-pad,
 .basic-operator-pad {
@@ -255,15 +255,16 @@
   cursor: not-allowed;
 }
 
-.keypad-left {
+.number-pad {
   grid-column: 1;
   grid-row: 2;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(33px, 1fr));
 }
 
-.number-pad {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(4, minmax(36px, 1fr));
+.actions {
+  grid-column: 1;
+  grid-row: 3;
 }
 
 .side-operations {
@@ -275,17 +276,17 @@
 
 .memory-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(36px, 1fr));
+  grid-template-rows: repeat(2, minmax(33px, 1fr));
 }
 
 .basic-operator-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(36px, 1fr));
+  grid-template-rows: repeat(2, minmax(33px, 1fr));
 }
 
 .memory-pad .utility-button,
 .basic-operator-pad .operator-button {
-  min-height: 36px;
+  min-height: 33px;
   height: 100%;
 }
 
@@ -298,7 +299,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  min-height: 34px;
+  min-height: 33px;
   height: 100%;
 }
 
