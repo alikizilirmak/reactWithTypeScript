@@ -7,7 +7,11 @@ import { calculateLn } from './LnOperator'
 import { calculateLog } from './LogOperator'
 import { calculateMod } from './ModOperator'
 import { calculateMultiplication } from './MultiplicationOperator'
-import { OperatorButtons } from './OperatorOptions'
+import {
+  BasicOperatorButtons,
+  OperatorButtons,
+  ScientificOperatorButtons,
+} from './OperatorOptions'
 import { calculatePercent } from './PercentOperator'
 import { calculatePermille } from './PermilleOperator'
 import { calculatePower } from './PowerOperator'
@@ -19,7 +23,7 @@ import type { OperationCalculator, Operator } from './types'
 
 // App.tsx bu dosyadan tek import ile tüm operatör altyapısını alabilsin diye
 // "barrel file" (toplayıcı dosya) yaklaşımı kullanıyoruz.
-export { OperatorButtons }
+export { BasicOperatorButtons, OperatorButtons, ScientificOperatorButtons }
 export type { OperationCalculator, Operator, OperatorButtonProps } from './types'
 
 // Operatör -> hesaplayıcı eşlemesi.

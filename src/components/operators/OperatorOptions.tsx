@@ -16,13 +16,12 @@ import { SquareOperatorButton } from './SquareOperator'
 import { SubtractionOperatorButton } from './SubtractionOperator'
 import type { OperatorButtonProps } from './types'
 
-export function OperatorButtons({
+export function BasicOperatorButtons({
   onSelect,
   activeOperator,
 }: OperatorButtonProps) {
   return (
     <>
-      {/* Butonların her biri kendi operatör component'inden geliyor. */}
       <AdditionOperatorButton
         onSelect={onSelect}
         activeOperator={activeOperator}
@@ -36,6 +35,16 @@ export function OperatorButtons({
         activeOperator={activeOperator}
       />
       <DivisionOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+    </>
+  )
+}
+
+export function ScientificOperatorButtons({
+  onSelect,
+  activeOperator,
+}: OperatorButtonProps) {
+  return (
+    <>
       <PowerOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <RootOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <LogOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
@@ -48,6 +57,16 @@ export function OperatorButtons({
       <ModOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <PercentOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <PermilleOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+    </>
+  )
+}
+
+export function OperatorButtons({ onSelect, activeOperator }: OperatorButtonProps) {
+  return (
+    <>
+      {/* Eski tek-parça düzen için tüm operatörleri birlikte döndürür. */}
+      <BasicOperatorButtons onSelect={onSelect} activeOperator={activeOperator} />
+      <ScientificOperatorButtons onSelect={onSelect} activeOperator={activeOperator} />
     </>
   )
 }

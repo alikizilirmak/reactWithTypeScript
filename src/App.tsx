@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { CalculationComponent } from './components/calculation/CalculationComponent'
 import {
+  BasicOperatorButtons,
   isDegreeOperator,
   isRatioOperator,
-  OperatorButtons,
+  ScientificOperatorButtons,
   type Operator,
 } from './components/operators'
 
@@ -1412,176 +1413,200 @@ function App() {
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
 
-        {/* Hafıza + sabit değer + son cevap tuşları */}
-        <div className="utility-pad" role="group" aria-label="Hafıza ve sabit değer tuşları">
-          <button
-            type="button"
-            className={`utility-button memory ${memoryValue !== null ? 'active' : ''}`}
-            onClick={clearMemory}
-          >
-            MC
-          </button>
-          <button
-            type="button"
-            className="utility-button memory"
-            onClick={recallMemory}
-            disabled={memoryValue === null}
-          >
-            MR
-          </button>
-          <button
-            type="button"
-            className="utility-button memory"
-            onClick={() => updateMemoryByDisplay('add')}
-          >
-            M+
-          </button>
-          <button
-            type="button"
-            className="utility-button memory"
-            onClick={() => updateMemoryByDisplay('subtract')}
-          >
-            M-
-          </button>
-          <button type="button" className="utility-button constant" onClick={usePiValue}>
-            π
-          </button>
-          <button type="button" className="utility-button constant" onClick={useEulerValue}>
-            e
-          </button>
-          <button
-            type="button"
-            className="utility-button ans"
-            onClick={useAnswerValue}
-            disabled={lastAnswerValue === null}
-          >
-            ANS
-          </button>
-        </div>
-
-        {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
+        {/* Bilimsel operatör + sabitler sayıların üstünde, hafıza + 4 işlem yan tarafta */}
         <div className="keypad-layout">
-          <div className="keypad-left">
-            <div className="number-pad">
-              <button
-                type="button"
-                className={activeVirtualKey === '7' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('7')}
-              >
-                7
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '8' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('8')}
-              >
-                8
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '9' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('9')}
-              >
-                9
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '4' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('4')}
-              >
-                4
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '5' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('5')}
-              >
-                5
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '6' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('6')}
-              >
-                6
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '1' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('1')}
-              >
-                1
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '2' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('2')}
-              >
-                2
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '3' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('3')}
-              >
-                3
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '±' ? 'key-pressed' : ''}
-                onClick={toggleSign}
-              >
-                ±
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '0' ? 'key-pressed' : ''}
-                onClick={() => appendDigit('0')}
-              >
-                0
-              </button>
-              <button
-                type="button"
-                className={activeVirtualKey === '.' ? 'key-pressed' : ''}
-                onClick={appendDecimal}
-              >
-                .
-              </button>
+          <div className="keypad-main">
+            <div className="scientific-and-constants">
+              <div className="scientific-operator-pad">
+                <ScientificOperatorButtons
+                  onSelect={handleOperatorSelect}
+                  activeOperator={pendingOperator}
+                />
+              </div>
+              <div className="constants-pad" role="group" aria-label="Sabit değer tuşları">
+                <button
+                  type="button"
+                  className="utility-button constant"
+                  onClick={usePiValue}
+                >
+                  π
+                </button>
+                <button
+                  type="button"
+                  className="utility-button constant"
+                  onClick={useEulerValue}
+                >
+                  e
+                </button>
+                <button
+                  type="button"
+                  className="utility-button ans"
+                  onClick={useAnswerValue}
+                  disabled={lastAnswerValue === null}
+                >
+                  ANS
+                </button>
+              </div>
             </div>
-            <div className="actions">
-              <button
-                type="button"
-                className={`paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
-                onClick={() => appendExpressionToken('(')}
-              >
-                (
-              </button>
-              <button
-                type="button"
-                className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
-                onClick={handleEqual}
-              >
-                =
-              </button>
-              <button
-                type="button"
-                className={`secondary ${activeVirtualKey === 'clear' ? 'key-pressed' : ''}`}
-                onClick={clearAll}
-              >
-                C
-              </button>
-              <button
-                type="button"
-                className={`paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
-                onClick={() => appendExpressionToken(')')}
-              >
-                )
-              </button>
+
+            <div className="keypad-left">
+              <div className="number-pad">
+                <button
+                  type="button"
+                  className={activeVirtualKey === '7' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('7')}
+                >
+                  7
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '8' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('8')}
+                >
+                  8
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '9' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('9')}
+                >
+                  9
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '4' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('4')}
+                >
+                  4
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '5' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('5')}
+                >
+                  5
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '6' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('6')}
+                >
+                  6
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '1' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('1')}
+                >
+                  1
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '2' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('2')}
+                >
+                  2
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '3' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('3')}
+                >
+                  3
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '±' ? 'key-pressed' : ''}
+                  onClick={toggleSign}
+                >
+                  ±
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '0' ? 'key-pressed' : ''}
+                  onClick={() => appendDigit('0')}
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  className={activeVirtualKey === '.' ? 'key-pressed' : ''}
+                  onClick={appendDecimal}
+                >
+                  .
+                </button>
+              </div>
+              <div className="actions">
+                <button
+                  type="button"
+                  className={`paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
+                  onClick={() => appendExpressionToken('(')}
+                >
+                  (
+                </button>
+                <button
+                  type="button"
+                  className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
+                  onClick={handleEqual}
+                >
+                  =
+                </button>
+                <button
+                  type="button"
+                  className={`secondary ${activeVirtualKey === 'clear' ? 'key-pressed' : ''}`}
+                  onClick={clearAll}
+                >
+                  C
+                </button>
+                <button
+                  type="button"
+                  className={`paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
+                  onClick={() => appendExpressionToken(')')}
+                >
+                  )
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="operator-pad scientific">
-            <OperatorButtons onSelect={handleOperatorSelect} activeOperator={pendingOperator} />
+          <div className="side-operations">
+            <div className="memory-pad" role="group" aria-label="Hafıza tuşları">
+              <button
+                type="button"
+                className={`utility-button memory ${memoryValue !== null ? 'active' : ''}`}
+                onClick={clearMemory}
+              >
+                MC
+              </button>
+              <button
+                type="button"
+                className="utility-button memory"
+                onClick={recallMemory}
+                disabled={memoryValue === null}
+              >
+                MR
+              </button>
+              <button
+                type="button"
+                className="utility-button memory"
+                onClick={() => updateMemoryByDisplay('add')}
+              >
+                M+
+              </button>
+              <button
+                type="button"
+                className="utility-button memory"
+                onClick={() => updateMemoryByDisplay('subtract')}
+              >
+                M-
+              </button>
+            </div>
+            <div className="basic-operator-pad">
+              <BasicOperatorButtons
+                onSelect={handleOperatorSelect}
+                activeOperator={pendingOperator}
+              />
+            </div>
           </div>
         </div>
       </main>

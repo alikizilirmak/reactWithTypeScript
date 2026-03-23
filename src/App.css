@@ -14,8 +14,6 @@
 }
 
 .calculator {
-  --operator-max-height: calc(8 * 34px + 7 * 0.5rem);
-
   width: 100%;
   height: auto;
   min-height: var(--panel-height);
@@ -168,12 +166,6 @@
   border: 1px solid #d1d5db;
 }
 
-.utility-pad {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.45rem;
-}
-
 .utility-button {
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
@@ -215,41 +207,70 @@
 
 .keypad-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 1fr) 180px;
   gap: 0.6rem;
   align-self: start;
-  align-items: stretch;
-  min-height: var(--operator-max-height);
+  align-items: start;
+  min-height: 0;
 }
 
+.keypad-main,
+.scientific-and-constants,
+.scientific-operator-pad,
+.constants-pad,
 .keypad-left,
 .number-pad,
-.operator-pad {
+.side-operations,
+.memory-pad,
+.basic-operator-pad {
   display: grid;
   gap: 0.5rem;
   min-height: 0;
 }
 
+.keypad-main {
+  grid-template-rows: auto auto;
+}
+
+.scientific-and-constants {
+  grid-template-columns: minmax(0, 1fr) 180px;
+}
+
+.scientific-operator-pad {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.constants-pad {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scientific-operator-pad .operator-button,
+.constants-pad .utility-button {
+  min-height: 32px;
+  padding: 0.35rem 0.3rem;
+  font-size: 0.84rem;
+}
+
 .keypad-left {
-  align-self: stretch;
-  height: 100%;
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .number-pad {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(36px, 1fr));
-  height: 100%;
 }
 
-.operator-pad {
+.side-operations {
+  grid-template-rows: auto 1fr;
+}
+
+.memory-pad {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-self: stretch;
-  height: 100%;
 }
 
-.operator-pad.scientific {
-  grid-template-rows: repeat(8, minmax(30px, 1fr));
+.basic-operator-pad {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(4, minmax(36px, 1fr));
 }
 
 .number-pad button,
@@ -747,12 +768,30 @@
     align-items: flex-start;
   }
 
-  .history-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .keypad-layout {
+    grid-template-columns: 1fr;
   }
 
-  .utility-pad {
+  .scientific-and-constants {
+    grid-template-columns: 1fr;
+  }
+
+  .scientific-operator-pad {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .side-operations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+
+  .basic-operator-pad {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(36px, 1fr));
+  }
+
+  .history-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
