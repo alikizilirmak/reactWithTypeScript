@@ -1423,19 +1423,33 @@ function App() {
               />
             </div>
             <div className="constants-pad" role="group" aria-label="Sabit değer tuşları">
-              <button type="button" className="operator-button" onClick={usePiValue}>
+              <button type="button" className="operator-button constant" onClick={usePiValue}>
                 π
               </button>
-              <button type="button" className="operator-button" onClick={useEulerValue}>
+              <button type="button" className="operator-button constant" onClick={useEulerValue}>
                 e
               </button>
               <button
                 type="button"
-                className="operator-button"
+                className="operator-button ans"
                 onClick={useAnswerValue}
                 disabled={lastAnswerValue === null}
               >
                 ANS
+              </button>
+              <button
+                type="button"
+                className={`operator-button paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
+                onClick={() => appendExpressionToken('(')}
+              >
+                (
+              </button>
+              <button
+                type="button"
+                className={`operator-button paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
+                onClick={() => appendExpressionToken(')')}
+              >
+                )
               </button>
             </div>
           </div>
@@ -1571,13 +1585,6 @@ function App() {
           <div className="actions">
             <button
               type="button"
-              className={`paren ${activeVirtualKey === '(' ? 'key-pressed' : ''}`}
-              onClick={() => appendExpressionToken('(')}
-            >
-              (
-            </button>
-            <button
-              type="button"
               className={`equal ${activeVirtualKey === '=' ? 'key-pressed' : ''}`}
               onClick={handleEqual}
             >
@@ -1589,13 +1596,6 @@ function App() {
               onClick={clearAll}
             >
               C
-            </button>
-            <button
-              type="button"
-              className={`paren ${activeVirtualKey === ')' ? 'key-pressed' : ''}`}
-              onClick={() => appendExpressionToken(')')}
-            >
-              )
             </button>
           </div>
 
