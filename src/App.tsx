@@ -416,6 +416,8 @@ function App() {
   const [displayValue, setDisplayValue] = useState<string>('0')
   const [lastPressedValue, setLastPressedValue] = useState<string>('')
   const [storedValue, setStoredValue] = useState<number | null>(null)
+  const [memoryValue, setMemoryValue] = useState<number | null>(null)
+  const [lastAnswerValue, setLastAnswerValue] = useState<number | null>(null)
   const [pendingOperator, setPendingOperator] = useState<Operator | null>(null)
   const [calculationJob, setCalculationJob] = useState<CalculationJob | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
@@ -470,6 +472,32 @@ function App() {
 
     const parsedValue = Number(trimmedValue)
     return Number.isFinite(parsedValue) ? parsedValue : null
+  }
+
+  // Hesap makinesinde kullanacağımız sayıları "ekran dostu" kısa formata çevirir.
+  // Böylece pi/e/ANS gibi değerler gereksiz uzun görünmez.
+  const formatNumberForDisplay = (value: number): string => {
+    const normalizedValue = Number.parseFloat(value.toPrecision(12))
+    return Number.isFinite(normalizedValue) ? normalizedValue.toString() : value.toString()
+  }
+
+  // Pi, e ve ANS gibi hazır sayıları ekrana yerleştirmek için ortak yardımcı.
+  const usePreparedNumber = (value: number, pressedLabel: string) => {
+    const formattedValue = formatNumberForDisplay(value)
+
+    if (isExpressionInputActive) {
+      appendExpressionToken(formattedValue)
+      setLastPressedValue(pressedLabel)
+      return
+    }
+
+    setDisplayValue(formattedValue)
+    setLastPressedValue(pressedLabel)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(false)
+    setIsExpressionInputActive(false)
   }
 
   // Geçmişte görünürken boş değerleri daha anlaşılır göstermek için yardımcı fonksiyon.
@@ -653,6 +681,12 @@ function App() {
   ) => {
     // ResultText'i her durumda ekrana basıyoruz (hata mesajı da olabilir).
     setDisplayValue(resultText)
+    if (!isError) {
+      const parsedResult = parseNumberInput(resultText)
+      if (parsedResult !== null) {
+        setLastAnswerValue(parsedResult)
+      }
+    }
     addToHistory(
       finishedJob.first,
       finishedJob.second,
@@ -911,6 +945,14 @@ function App() {
       setDisplayValue(resultText)
       setLastPressedValue(expressionText)
       addExpressionToHistory(expressionText, resultText, isError)
+
+      if (!isError) {
+        const parsedResult = parseNumberInput(resultText)
+        if (parsedResult !== null) {
+          setLastAnswerValue(parsedResult)
+        }
+      }
+
       setStoredValue(null)
       setPendingOperator(null)
       setCalculationJob(null)
@@ -961,6 +1003,60 @@ function App() {
     setIsExpressionInputActive(false)
   }
 
+  // Hafıza (memory) tuşları:
+  // - MC: hafızayı temizler
+  // - MR: hafızadaki değeri ekrana geri getirir
+  // - M+ / M-: ekrandaki sayıyı hafızaya ekler / çıkarır
+  const clearMemory = () => {
+    setMemoryValue(null)
+    setLastPressedValue('MC')
+  }
+
+  const recallMemory = () => {
+    if (memoryValue === null) {
+      setDisplayValue('Hafıza boş.')
+      return
+    }
+
+    usePreparedNumber(memoryValue, 'MR')
+  }
+
+  const updateMemoryByDisplay = (direction: 'add' | 'subtract') => {
+    const parsedDisplayValue = parseNumberInput(displayValue)
+
+    if (parsedDisplayValue === null) {
+      setDisplayValue('Hafıza için önce geçerli bir sayı girin.')
+      return
+    }
+
+    setMemoryValue((previousMemory) => {
+      const baseValue = previousMemory ?? 0
+      const nextValue =
+        direction === 'add'
+          ? baseValue + parsedDisplayValue
+          : baseValue - parsedDisplayValue
+      return Number.isFinite(nextValue) ? nextValue : previousMemory
+    })
+    setLastPressedValue(direction === 'add' ? 'M+' : 'M-')
+  }
+
+  const usePiValue = () => {
+    usePreparedNumber(Math.PI, 'π')
+  }
+
+  const useEulerValue = () => {
+    usePreparedNumber(Math.E, 'e')
+  }
+
+  const useAnswerValue = () => {
+    if (lastAnswerValue === null) {
+      setDisplayValue('Henüz ANS değeri yok.')
+      return
+    }
+
+    usePreparedNumber(lastAnswerValue, 'ANS')
+  }
+
   const toggleThemeMode = () => {
     setThemeMode((previousTheme) => (previousTheme === 'light' ? 'dark' : 'light'))
   }
@@ -974,6 +1070,10 @@ function App() {
   const applyHistoryItem = (item: HistoryItem) => {
     setDisplayValue(item.result)
     setLastPressedValue(item.expression)
+    const parsedResult = parseNumberInput(item.result)
+    if (parsedResult !== null) {
+      setLastAnswerValue(parsedResult)
+    }
     setStoredValue(null)
     setPendingOperator(null)
     setCalculationJob(null)
@@ -1311,6 +1411,53 @@ function App() {
         <p className="shortcut-hint">
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
+
+        {/* Hafıza + sabit değer + son cevap tuşları */}
+        <div className="utility-pad" role="group" aria-label="Hafıza ve sabit değer tuşları">
+          <button
+            type="button"
+            className={`utility-button memory ${memoryValue !== null ? 'active' : ''}`}
+            onClick={clearMemory}
+          >
+            MC
+          </button>
+          <button
+            type="button"
+            className="utility-button memory"
+            onClick={recallMemory}
+            disabled={memoryValue === null}
+          >
+            MR
+          </button>
+          <button
+            type="button"
+            className="utility-button memory"
+            onClick={() => updateMemoryByDisplay('add')}
+          >
+            M+
+          </button>
+          <button
+            type="button"
+            className="utility-button memory"
+            onClick={() => updateMemoryByDisplay('subtract')}
+          >
+            M-
+          </button>
+          <button type="button" className="utility-button constant" onClick={usePiValue}>
+            π
+          </button>
+          <button type="button" className="utility-button constant" onClick={useEulerValue}>
+            e
+          </button>
+          <button
+            type="button"
+            className="utility-button ans"
+            onClick={useAnswerValue}
+            disabled={lastAnswerValue === null}
+          >
+            ANS
+          </button>
+        </div>
 
         {/* Sol blok sayısal tuşlar, sağ blok operatör tuşları */}
         <div className="keypad-layout">
