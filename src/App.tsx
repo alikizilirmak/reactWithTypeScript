@@ -1726,6 +1726,24 @@ function App() {
               <li>
                 <kbd>F</kbd> : Faktöriyel (<code>x!</code>)
               </li>
+              <li className="shortcut-section">
+                <strong>Yardımcı tuşlar (ekran üzerinden):</strong>
+              </li>
+              <li>
+                <kbd>MC</kbd> : Hafızayı temizler
+              </li>
+              <li>
+                <kbd>MR</kbd> : Hafızadaki değeri ekrana getirir
+              </li>
+              <li>
+                <kbd>M+</kbd> / <kbd>M-</kbd> : Ekrandaki sayıyı hafızaya ekler / çıkarır
+              </li>
+              <li>
+                <kbd>π</kbd> / <kbd>e</kbd> : Sabit sayıları ekrana yazar
+              </li>
+              <li>
+                <kbd>ANS</kbd> : Son başarılı sonucu tekrar kullanır
+              </li>
               <li>
                 <kbd>Backspace</kbd> : Son girilen rakamı sil
               </li>
