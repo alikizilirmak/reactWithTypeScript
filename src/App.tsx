@@ -1440,91 +1440,133 @@ function App() {
             </div>
           </div>
 
-          <div className="number-pad">
-            <button
-              type="button"
-              className={activeVirtualKey === '7' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('7')}
-            >
-              7
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '8' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('8')}
-            >
-              8
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '9' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('9')}
-            >
-              9
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '4' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('4')}
-            >
-              4
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '5' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('5')}
-            >
-              5
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '6' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('6')}
-            >
-              6
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '1' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('1')}
-            >
-              1
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '2' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('2')}
-            >
-              2
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '3' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('3')}
-            >
-              3
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '±' ? 'key-pressed' : ''}
-              onClick={toggleSign}
-            >
-              ±
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '0' ? 'key-pressed' : ''}
-              onClick={() => appendDigit('0')}
-            >
-              0
-            </button>
-            <button
-              type="button"
-              className={activeVirtualKey === '.' ? 'key-pressed' : ''}
-              onClick={appendDecimal}
-            >
-              .
-            </button>
+          <div className="main-pad-row">
+            <div className="number-pad">
+              <button
+                type="button"
+                className={activeVirtualKey === '7' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('7')}
+              >
+                7
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '8' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('8')}
+              >
+                8
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '9' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('9')}
+              >
+                9
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '4' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('4')}
+              >
+                4
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '5' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('5')}
+              >
+                5
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '6' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('6')}
+              >
+                6
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '1' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('1')}
+              >
+                1
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '2' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('2')}
+              >
+                2
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '3' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('3')}
+              >
+                3
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '±' ? 'key-pressed' : ''}
+                onClick={toggleSign}
+              >
+                ±
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '0' ? 'key-pressed' : ''}
+                onClick={() => appendDigit('0')}
+              >
+                0
+              </button>
+              <button
+                type="button"
+                className={activeVirtualKey === '.' ? 'key-pressed' : ''}
+                onClick={appendDecimal}
+              >
+                .
+              </button>
+            </div>
+
+            <div className="side-operations">
+              <div className="memory-pad" role="group" aria-label="Hafıza tuşları">
+                <button
+                  type="button"
+                  className={`utility-button memory ${memoryValue !== null ? 'active' : ''}`}
+                  onClick={clearMemory}
+                >
+                  MC
+                </button>
+                <button
+                  type="button"
+                  className="utility-button memory"
+                  onClick={recallMemory}
+                  disabled={memoryValue === null}
+                >
+                  MR
+                </button>
+                <button
+                  type="button"
+                  className="utility-button memory"
+                  onClick={() => updateMemoryByDisplay('add')}
+                >
+                  M+
+                </button>
+                <button
+                  type="button"
+                  className="utility-button memory"
+                  onClick={() => updateMemoryByDisplay('subtract')}
+                >
+                  M-
+                </button>
+              </div>
+              <div className="basic-operator-pad">
+                <BasicOperatorButtons
+                  onSelect={handleOperatorSelect}
+                  activeOperator={pendingOperator}
+                />
+              </div>
+            </div>
           </div>
           <div className="actions">
             <button
@@ -1557,45 +1599,6 @@ function App() {
             </button>
           </div>
 
-          <div className="side-operations">
-            <div className="memory-pad" role="group" aria-label="Hafıza tuşları">
-              <button
-                type="button"
-                className={`utility-button memory ${memoryValue !== null ? 'active' : ''}`}
-                onClick={clearMemory}
-              >
-                MC
-              </button>
-              <button
-                type="button"
-                className="utility-button memory"
-                onClick={recallMemory}
-                disabled={memoryValue === null}
-              >
-                MR
-              </button>
-              <button
-                type="button"
-                className="utility-button memory"
-                onClick={() => updateMemoryByDisplay('add')}
-              >
-                M+
-              </button>
-              <button
-                type="button"
-                className="utility-button memory"
-                onClick={() => updateMemoryByDisplay('subtract')}
-              >
-                M-
-              </button>
-            </div>
-            <div className="basic-operator-pad">
-              <BasicOperatorButtons
-                onSelect={handleOperatorSelect}
-                activeOperator={pendingOperator}
-              />
-            </div>
-          </div>
         </div>
       </main>
 

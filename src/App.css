@@ -207,7 +207,7 @@
 
 .keypad-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: 1fr;
   grid-template-rows: auto auto auto;
   gap: 0.5rem;
   align-self: start;
@@ -215,6 +215,7 @@
   min-height: 0;
 }
 
+.main-pad-row,
 .scientific-and-constants,
 .scientific-operator-pad,
 .constants-pad,
@@ -228,9 +229,11 @@
   min-height: 0;
 }
 
+.main-pad-row {
+  grid-template-columns: minmax(0, 1fr) 180px;
+}
+
 .scientific-and-constants {
-  grid-column: 1;
-  grid-row: 1;
   grid-template-columns: minmax(0, 1fr) 180px;
 }
 
@@ -256,20 +259,11 @@
 }
 
 .number-pad {
-  grid-column: 1;
-  grid-row: 2;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(31px, 1fr));
 }
 
-.actions {
-  grid-column: 1;
-  grid-row: 3;
-}
-
 .side-operations {
-  grid-column: 2;
-  grid-row: 2;
   grid-template-rows: auto auto;
   align-self: end;
 }
@@ -789,6 +783,10 @@
     grid-template-columns: 1fr;
   }
 
+  .main-pad-row {
+    grid-template-columns: 1fr;
+  }
+
   .scientific-and-constants {
     grid-template-columns: 1fr;
   }
@@ -798,8 +796,6 @@
   }
 
   .side-operations {
-    grid-column: 1;
-    grid-row: auto;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: auto;
   }
