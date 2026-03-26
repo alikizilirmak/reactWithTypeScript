@@ -955,11 +955,18 @@ function App() {
   // Parantezli ifade yazarken karakterleri doğrudan ekrana ekliyoruz.
   const appendExpressionToken = (token: string) => {
     const normalizedToken = token === ',' ? '.' : token
-    const numericDisplayCandidate = displayValue.trim()
-    const parsedCurrentValue = parseNumberInput(numericDisplayCandidate)
+    const currentDisplay = displayValue.trim()
+    const parsedCurrentValue = parseNumberInput(currentDisplay)
+    const pendingOperatorToken =
+      !isExpressionInputActive &&
+      pendingOperator !== null &&
+      isWaitingForSecondValue &&
+      !isQuadraticModeActive
+        ? pendingOperator
+        : ''
     const canReuseCurrentDisplay =
-      isExpressionInputActive || (parsedCurrentValue !== null && displayValue !== '0')
-    const baseValue = canReuseCurrentDisplay ? displayValue : ''
+      isExpressionInputActive || pendingOperatorToken !== '' || (parsedCurrentValue !== null && currentDisplay !== '0')
+    const baseValue = canReuseCurrentDisplay ? `${currentDisplay}${pendingOperatorToken}` : ''
     const needsImplicitMultiplication =
       normalizedToken === '(' && /[\d.)]$/.test(baseValue)
     const nextValue = `${baseValue}${needsImplicitMultiplication ? '*' : ''}${normalizedToken}`
