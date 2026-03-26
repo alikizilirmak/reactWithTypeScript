@@ -938,7 +938,7 @@ function App() {
   // Parantezli ifade yazarken karakterleri doğrudan ekrana ekliyoruz.
   const appendExpressionToken = (token: string) => {
     const normalizedToken = token === ',' ? '.' : token
-    const numericDisplayCandidate = displayValue.replace('*', '').trim()
+    const numericDisplayCandidate = displayValue.trim()
     const parsedCurrentValue = parseNumberInput(numericDisplayCandidate)
     const canReuseCurrentDisplay =
       isExpressionInputActive || (parsedCurrentValue !== null && displayValue !== '0')
@@ -1056,6 +1056,34 @@ function App() {
 
   // Pozitif/negatif işaretini çevirir (±).
   const toggleSign = () => {
+    if (isExpressionInputActive || isQuadraticModeActive) {
+      const expression = displayValue.trim()
+      if (!expression || expression === '0') {
+        return
+      }
+
+      const lastNumberMatch = expression.match(/-?\d+(?:\.\d+)?(?=[^\d.]*$)/)
+      if (!lastNumberMatch || lastNumberMatch.index === undefined) {
+        const endsWithOpeningGroup = /[(*+\-/^=]$/.test(expression)
+        const fallbackValue = endsWithOpeningGroup ? `${expression}-` : `${expression}*(-1)`
+        setDisplayValue(fallbackValue)
+        setLastPressedValue(fallbackValue)
+        return
+      }
+
+      const matchedNumber = lastNumberMatch[0]
+      const matchStart = lastNumberMatch.index
+      const matchEnd = matchStart + matchedNumber.length
+      const toggledNumber = matchedNumber.startsWith('-')
+        ? matchedNumber.slice(1)
+        : `-${matchedNumber}`
+      const nextValue = `${expression.slice(0, matchStart)}${toggledNumber}${expression.slice(matchEnd)}`
+
+      setDisplayValue(nextValue)
+      setLastPressedValue(nextValue)
+      return
+    }
+
     const parsedValue = parseNumberInput(displayValue)
 
     if (parsedValue === null || parsedValue === 0) {
@@ -1076,11 +1104,12 @@ function App() {
 
   // Backspace davranışı: son girilen karakteri siler.
   const backspaceDisplay = () => {
-    if (isExpressionInputActive) {
+    if (isExpressionInputActive || isQuadraticModeActive) {
       if (displayValue.length <= 1) {
         setDisplayValue('0')
         setLastPressedValue('')
         setIsExpressionInputActive(false)
+        setIsQuadraticModeActive(false)
         return
       }
 
@@ -1088,8 +1117,9 @@ function App() {
       setDisplayValue(nextValue)
       setLastPressedValue(nextValue)
 
-      if (!/[()+\-*/^]/.test(nextValue)) {
+      if (!/[()+\-*/^=]/.test(nextValue)) {
         setIsExpressionInputActive(false)
+        setIsQuadraticModeActive(false)
       }
       return
     }
