@@ -938,7 +938,8 @@ function App() {
   // Parantezli ifade yazarken karakterleri doğrudan ekrana ekliyoruz.
   const appendExpressionToken = (token: string) => {
     const normalizedToken = token === ',' ? '.' : token
-    const parsedCurrentValue = parseNumberInput(displayValue)
+    const numericDisplayCandidate = displayValue.replace('*', '').trim()
+    const parsedCurrentValue = parseNumberInput(numericDisplayCandidate)
     const canReuseCurrentDisplay =
       isExpressionInputActive || (parsedCurrentValue !== null && displayValue !== '0')
     const nextValue = `${canReuseCurrentDisplay ? displayValue : ''}${normalizedToken}`
