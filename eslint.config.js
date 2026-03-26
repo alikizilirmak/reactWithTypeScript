@@ -20,4 +20,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/components/operators/**/*.tsx'],
+    rules: {
+      // Operator dosyalarında component + hesaplama fonksiyonu birlikte export ediliyor.
+      // Bu yapı bilinçli olduğu için fast-refresh kuralını bu klasörde gevşetiyoruz.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

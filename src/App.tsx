@@ -482,7 +482,7 @@ function App() {
   }
 
   // Pi ve e gibi hazır sayıları ekrana yerleştirmek için ortak yardımcı.
-  const usePreparedNumber = (value: number, pressedLabel: string) => {
+  const applyPreparedNumber = (value: number, pressedLabel: string) => {
     const formattedValue = formatNumberForDisplay(value)
 
     if (isExpressionInputActive) {
@@ -1005,7 +1005,7 @@ function App() {
       return
     }
 
-    usePreparedNumber(memoryValue, 'MR')
+    applyPreparedNumber(memoryValue, 'MR')
   }
 
   const updateMemoryByDisplay = (direction: 'add' | 'subtract') => {
@@ -1028,11 +1028,11 @@ function App() {
   }
 
   const usePiValue = () => {
-    usePreparedNumber(Math.PI, 'π')
+    applyPreparedNumber(Math.PI, 'π')
   }
 
   const useEulerValue = () => {
-    usePreparedNumber(Math.E, 'e')
+    applyPreparedNumber(Math.E, 'e')
   }
 
   const toggleThemeMode = () => {
