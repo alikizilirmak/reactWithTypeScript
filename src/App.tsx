@@ -1046,11 +1046,35 @@ function App() {
 
   // Geçmişten bir satıra tıklanınca ilgili verileri tekrar forma yüklüyoruz.
   const applyHistoryItem = (item: HistoryItem) => {
+    setCalculationJob(null)
+
+    if (item.operator === 'expr') {
+      setDisplayValue(item.firstValue)
+      setLastPressedValue(item.firstValue)
+      setStoredValue(null)
+      setPendingOperator(null)
+      setIsWaitingForSecondValue(false)
+      setIsExpressionInputActive(true)
+      return
+    }
+
+    if (!item.isError && !isUnaryOperator(item.operator)) {
+      const parsedFirstValue = parseNumberInput(item.firstValue)
+      if (parsedFirstValue !== null) {
+        setDisplayValue(item.secondValue)
+        setLastPressedValue(item.expression)
+        setStoredValue(parsedFirstValue)
+        setPendingOperator(item.operator)
+        setIsWaitingForSecondValue(false)
+        setIsExpressionInputActive(false)
+        return
+      }
+    }
+
     setDisplayValue(item.result)
     setLastPressedValue(item.expression)
     setStoredValue(null)
     setPendingOperator(null)
-    setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
   }
