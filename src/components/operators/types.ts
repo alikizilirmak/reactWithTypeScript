@@ -17,6 +17,9 @@ export type Operator =
   | '|x|'
   | 'x!'
   | 'mod'
+  | 'sin'
+  | 'cos'
+  | 'tan'
 
 // Her operatör hesaplama sonunda bu yapıyı döndürür:
 // - resultText: kullanıcıya gösterilecek sonuç metni

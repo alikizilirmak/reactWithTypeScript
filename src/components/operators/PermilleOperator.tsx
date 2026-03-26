@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "‰" operatör butonu.
 export function PermilleOperatorButton({
   onSelect,
   activeOperator,
@@ -15,9 +14,3 @@ export function PermilleOperatorButton({
     </button>
   )
 }
-
-// first sayısının second bindesini hesaplar.
-export const calculatePermille: OperationCalculator = (first, second) => ({
-  resultText: ((first * second) / 1000).toString(),
-  isError: false,
-})

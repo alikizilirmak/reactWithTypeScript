@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "e^x" operatör butonu (tek sayı ile çalışır).
 export function ExpOperatorButton({ onSelect, activeOperator }: OperatorButtonProps) {
   return (
     <button
@@ -11,20 +10,4 @@ export function ExpOperatorButton({ onSelect, activeOperator }: OperatorButtonPr
       e^x
     </button>
   )
-}
-
-// first değeri için e^x hesaplar.
-export const calculateExp: OperationCalculator = (first) => {
-  const calculation = Math.exp(first)
-  if (!Number.isFinite(calculation)) {
-    return {
-      resultText: 'e^x sonucu sayı sınırını aşıyor.',
-      isError: true,
-    }
-  }
-
-  return {
-    resultText: calculation.toString(),
-    isError: false,
-  }
 }

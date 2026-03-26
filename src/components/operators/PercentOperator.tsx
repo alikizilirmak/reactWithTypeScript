@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "%" operatör butonu.
 export function PercentOperatorButton({
   onSelect,
   activeOperator,
@@ -15,9 +14,3 @@ export function PercentOperatorButton({
     </button>
   )
 }
-
-// first sayısının second yüzdesini hesaplar.
-export const calculatePercent: OperationCalculator = (first, second) => ({
-  resultText: ((first * second) / 100).toString(),
-  isError: false,
-})

@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "|x|" operatör butonu (tek sayı ile çalışır).
 export function AbsoluteOperatorButton({
   onSelect,
   activeOperator,
@@ -15,9 +14,3 @@ export function AbsoluteOperatorButton({
     </button>
   )
 }
-
-// first değerinin mutlak değerini döndürür.
-export const calculateAbsolute: OperationCalculator = (first) => ({
-  resultText: Math.abs(first).toString(),
-  isError: false,
-})

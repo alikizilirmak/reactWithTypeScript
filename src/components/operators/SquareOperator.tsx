@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "x²" operatör butonu (tek sayı ile çalışır).
 export function SquareOperatorButton({
   onSelect,
   activeOperator,
@@ -15,9 +14,3 @@ export function SquareOperatorButton({
     </button>
   )
 }
-
-// first değerinin karesini hesaplar.
-export const calculateSquare: OperationCalculator = (first) => ({
-  resultText: (first ** 2).toString(),
-  isError: false,
-})

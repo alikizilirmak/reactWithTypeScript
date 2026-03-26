@@ -42,6 +42,9 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
   '|x|',
   'x!',
   'mod',
+  'sin',
+  'cos',
+  'tan',
 ])
 const VALID_HISTORY_OPERATORS: ReadonlySet<HistoryItem['operator']> = new Set([
   ...VALID_OPERATORS,
@@ -54,6 +57,9 @@ const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
   '1/x',
   '|x|',
   'x!',
+  'sin',
+  'cos',
+  'tan',
 ])
 type ThemeMode = 'light' | 'dark'
 
@@ -482,7 +488,7 @@ function App() {
   }
 
   // Pi ve e gibi hazır sayıları ekrana yerleştirmek için ortak yardımcı.
-  const usePreparedNumber = (value: number, pressedLabel: string) => {
+  const applyPreparedNumber = (value: number, pressedLabel: string) => {
     const formattedValue = formatNumberForDisplay(value)
 
     if (isExpressionInputActive) {
@@ -536,6 +542,18 @@ function App() {
 
     if (selectedOperator === 'x!') {
       return `${first}! = ${resultText}`
+    }
+
+    if (selectedOperator === 'sin') {
+      return `sin(${first}) = ${resultText}`
+    }
+
+    if (selectedOperator === 'cos') {
+      return `cos(${first}) = ${resultText}`
+    }
+
+    if (selectedOperator === 'tan') {
+      return `tan(${first}) = ${resultText}`
     }
 
     if (selectedOperator === 'log') {
@@ -1005,7 +1023,7 @@ function App() {
       return
     }
 
-    usePreparedNumber(memoryValue, 'MR')
+    applyPreparedNumber(memoryValue, 'MR')
   }
 
   const updateMemoryByDisplay = (direction: 'add' | 'subtract') => {
@@ -1028,11 +1046,11 @@ function App() {
   }
 
   const usePiValue = () => {
-    usePreparedNumber(Math.PI, 'π')
+    applyPreparedNumber(Math.PI, 'π')
   }
 
   const useEulerValue = () => {
-    usePreparedNumber(Math.E, 'e')
+    applyPreparedNumber(Math.E, 'e')
   }
 
   const toggleThemeMode = () => {
@@ -1099,29 +1117,36 @@ function App() {
     }
   }, [])
 
-  // Klavye desteği:
-  // - 0..9       => sayı girişi
-  // - . ,        => ondalık ayırıcı
-  // - + - * /    => temel 4 işlem
-  // - ^          => üs alma (x^n)
-  // - e          => e^x hesabı
-  // - %          => yüzde hesabı
-  // - m          => mod alma
-  // - l          => ln(x)
-  // - g          => logaritma (tabanlı log)
-  // - r          => kök (n√x)
-  // - p          => binde (‰) hesabı
-  // - s          => kare alma (x²)
-  // - i          => tersini alma (1/x)
-  // - a          => mutlak değer (|x|)
-  // - f          => faktöriyel (x!)
-  // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
-  // - c          => C (temizle)
-  // - Backspace  => son karakteri sil
-  // - Enter / =  => sonucu hesapla
-  // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
-  // - H / ?      => mini klavye kısayol rehberini aç/kapat
-  // Not: Ctrl/Meta/Alt kombinasyonlarını özellikle yakalamıyoruz.
+  // Ref ile handler fonksiyonlarını saklayarak effect'in her render'da
+  // yeniden abone olmasını önlüyoruz.
+  const keyboardHandlersRef = useRef({
+    appendExpressionToken,
+    appendDigit,
+    appendDecimal,
+    backspaceDisplay,
+    clearAll,
+    handleEqual,
+    handleOperatorSelect,
+    flashVirtualKey,
+    isExpressionInputActive,
+    isShortcutHelpOpen,
+  })
+
+  useEffect(() => {
+    keyboardHandlersRef.current = {
+      appendExpressionToken,
+      appendDigit,
+      appendDecimal,
+      backspaceDisplay,
+      clearAll,
+      handleEqual,
+      handleOperatorSelect,
+      flashVirtualKey,
+      isExpressionInputActive,
+      isShortcutHelpOpen,
+    }
+  })
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey) {
@@ -1138,6 +1163,7 @@ function App() {
         return
       }
 
+      const handlers = keyboardHandlersRef.current
       const lowerKey = event.key.toLowerCase()
       const isHelpToggleKey = event.key === '?' || lowerKey === 'h'
 
@@ -1147,7 +1173,7 @@ function App() {
         return
       }
 
-      if (isShortcutHelpOpen) {
+      if (handlers.isShortcutHelpOpen) {
         if (event.key === 'Escape') {
           event.preventDefault()
           setIsShortcutHelpOpen(false)
@@ -1157,8 +1183,8 @@ function App() {
 
       if (lowerKey === 'c') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        handlers.clearAll()
+        handlers.flashVirtualKey('clear')
         return
       }
 
@@ -1174,46 +1200,46 @@ function App() {
         event.key === '(' ||
         event.key === ')'
       const shouldWriteExpressionToken =
-        isExpressionInputActive || event.key === '(' || event.key === ')'
+        handlers.isExpressionInputActive || event.key === '(' || event.key === ')'
 
       if (isExpressionTokenKey && shouldWriteExpressionToken) {
         event.preventDefault()
-        appendExpressionToken(event.key)
-        flashVirtualKey(event.key === ',' ? '.' : event.key)
+        handlers.appendExpressionToken(event.key)
+        handlers.flashVirtualKey(event.key === ',' ? '.' : event.key)
         return
       }
 
       if (/^[0-9]$/.test(event.key)) {
         event.preventDefault()
-        appendDigit(event.key)
-        flashVirtualKey(event.key)
+        handlers.appendDigit(event.key)
+        handlers.flashVirtualKey(event.key)
         return
       }
 
       if (event.key === '.' || event.key === ',') {
         event.preventDefault()
-        appendDecimal()
-        flashVirtualKey('.')
+        handlers.appendDecimal()
+        handlers.flashVirtualKey('.')
         return
       }
 
       if (event.key === 'Backspace') {
         event.preventDefault()
-        backspaceDisplay()
+        handlers.backspaceDisplay()
         return
       }
 
       if (event.key === 'Enter' || event.key === '=') {
         event.preventDefault()
-        handleEqual()
-        flashVirtualKey('=')
+        handlers.handleEqual()
+        handlers.flashVirtualKey('=')
         return
       }
 
       if (event.key === 'Escape') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        handlers.clearAll()
+        handlers.flashVirtualKey('clear')
         return
       }
 
@@ -1228,95 +1254,34 @@ function App() {
 
       if (operatorMap[event.key]) {
         event.preventDefault()
-        handleOperatorSelect(operatorMap[event.key])
-        flashVirtualKey(operatorMap[event.key])
+        handlers.handleOperatorSelect(operatorMap[event.key])
+        handlers.flashVirtualKey(operatorMap[event.key])
         return
       }
 
-      if (lowerKey === 'l') {
-        event.preventDefault()
-        handleOperatorSelect('ln')
-        flashVirtualKey('ln')
-        return
+      const letterOperatorMap: Record<string, Operator> = {
+        l: 'ln',
+        e: 'e^x',
+        g: 'log',
+        r: '√',
+        p: '‰',
+        m: 'mod',
+        s: 'x²',
+        i: '1/x',
+        a: '|x|',
+        f: 'x!',
       }
 
-      if (lowerKey === 'e') {
+      if (letterOperatorMap[lowerKey]) {
         event.preventDefault()
-        handleOperatorSelect('e^x')
-        flashVirtualKey('e^x')
-        return
-      }
-
-      if (lowerKey === 'g') {
-        event.preventDefault()
-        handleOperatorSelect('log')
-        flashVirtualKey('log')
-        return
-      }
-
-      if (lowerKey === 'r') {
-        event.preventDefault()
-        handleOperatorSelect('√')
-        flashVirtualKey('√')
-        return
-      }
-
-      if (lowerKey === 'p') {
-        event.preventDefault()
-        handleOperatorSelect('‰')
-        flashVirtualKey('‰')
-        return
-      }
-
-      if (lowerKey === 'm') {
-        event.preventDefault()
-        handleOperatorSelect('mod')
-        flashVirtualKey('mod')
-        return
-      }
-
-      if (lowerKey === 's') {
-        event.preventDefault()
-        handleOperatorSelect('x²')
-        flashVirtualKey('x²')
-        return
-      }
-
-      if (lowerKey === 'i') {
-        event.preventDefault()
-        handleOperatorSelect('1/x')
-        flashVirtualKey('1/x')
-        return
-      }
-
-      if (lowerKey === 'a') {
-        event.preventDefault()
-        handleOperatorSelect('|x|')
-        flashVirtualKey('|x|')
-        return
-      }
-
-      if (lowerKey === 'f') {
-        event.preventDefault()
-        handleOperatorSelect('x!')
-        flashVirtualKey('x!')
-        return
+        handlers.handleOperatorSelect(letterOperatorMap[lowerKey])
+        handlers.flashVirtualKey(letterOperatorMap[lowerKey])
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    appendDecimal,
-    appendDigit,
-    appendExpressionToken,
-    backspaceDisplay,
-    clearAll,
-    handleEqual,
-    handleOperatorSelect,
-    isExpressionInputActive,
-    isShortcutHelpOpen,
-  ])
+  }, [])
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.

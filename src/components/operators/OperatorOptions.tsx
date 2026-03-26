@@ -1,5 +1,6 @@
 import { AbsoluteOperatorButton } from './AbsoluteOperator'
 import { AdditionOperatorButton } from './AdditionOperator'
+import { CosOperatorButton } from './CosOperator'
 import { DivisionOperatorButton } from './DivisionOperator'
 import { ExpOperatorButton } from './ExpOperator'
 import { FactorialOperatorButton } from './FactorialOperator'
@@ -12,8 +13,10 @@ import { PermilleOperatorButton } from './PermilleOperator'
 import { PowerOperatorButton } from './PowerOperator'
 import { ReciprocalOperatorButton } from './ReciprocalOperator'
 import { RootOperatorButton } from './RootOperator'
+import { SinOperatorButton } from './SinOperator'
 import { SquareOperatorButton } from './SquareOperator'
 import { SubtractionOperatorButton } from './SubtractionOperator'
+import { TanOperatorButton } from './TanOperator'
 import type { OperatorButtonProps } from './types'
 
 export function BasicOperatorButtons({
@@ -57,6 +60,9 @@ export function ScientificOperatorButtons({
       <ModOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <PercentOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
       <PermilleOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <SinOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <CosOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
+      <TanOperatorButton onSelect={onSelect} activeOperator={activeOperator} />
     </>
   )
 }

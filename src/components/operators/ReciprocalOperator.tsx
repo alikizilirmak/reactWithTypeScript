@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "1/x" operatör butonu (tek sayı ile çalışır).
 export function ReciprocalOperatorButton({
   onSelect,
   activeOperator,
@@ -14,19 +13,4 @@ export function ReciprocalOperatorButton({
       1/x
     </button>
   )
-}
-
-// first değerinin tersini hesaplar.
-export const calculateReciprocal: OperationCalculator = (first) => {
-  if (first === 0) {
-    return {
-      resultText: '0 sayısının tersi tanımsızdır.',
-      isError: true,
-    }
-  }
-
-  return {
-    resultText: (1 / first).toString(),
-    isError: false,
-  }
 }

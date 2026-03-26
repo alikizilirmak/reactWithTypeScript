@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "-" operatör butonu.
 export function SubtractionOperatorButton({
   onSelect,
   activeOperator,
@@ -15,9 +14,3 @@ export function SubtractionOperatorButton({
     </button>
   )
 }
-
-// Çıkarma işlemini hesaplar.
-export const calculateSubtraction: OperationCalculator = (first, second) => ({
-  resultText: (first - second).toString(),
-  isError: false,
-})

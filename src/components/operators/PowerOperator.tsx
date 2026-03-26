@@ -1,6 +1,5 @@
-import type { OperationCalculator, OperatorButtonProps } from './types'
+import type { OperatorButtonProps } from './types'
 
-// "^" operatör butonu.
 export function PowerOperatorButton({
   onSelect,
   activeOperator,
@@ -15,9 +14,3 @@ export function PowerOperatorButton({
     </button>
   )
 }
-
-// first^second hesabı.
-export const calculatePower: OperationCalculator = (first, second) => ({
-  resultText: (first ** second).toString(),
-  isError: false,
-})
