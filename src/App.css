@@ -262,6 +262,17 @@
   background: #e5e7eb;
 }
 
+.constants-pad .variable {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 700;
+}
+
+.constants-pad .variable:hover {
+  background: #e0e7ff;
+}
+
 .number-pad {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(4, minmax(46px, 1fr));
@@ -322,7 +333,7 @@
 
 .actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -740,6 +751,16 @@
 
 .app-layout.theme-dark .constants-pad .paren:hover {
   background: #4b5563;
+}
+
+.app-layout.theme-dark .constants-pad .variable {
+  border-color: #4f46e5;
+  background: #312e81;
+  color: #e0e7ff;
+}
+
+.app-layout.theme-dark .constants-pad .variable:hover {
+  background: #4338ca;
 }
 
 .app-layout.theme-dark .theme-switch-track {

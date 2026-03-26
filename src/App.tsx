@@ -136,6 +136,11 @@ type ExpressionEvaluationResult = {
   isError: boolean
 }
 
+type QuadraticSolveResult = {
+  resultText: string
+  isError: boolean
+}
+
 const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvaluationResult => {
   const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
   if (!expression) {
@@ -359,6 +364,194 @@ const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvalu
   }
 }
 
+const evaluateQuadraticExpression = (
+  rawExpression: string,
+  variableSymbol = 'a',
+): QuadraticSolveResult => {
+  const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
+  if (!expression) {
+    return {
+      resultText: `Lütfen ${variableSymbol} içeren bir denklem girin.`,
+      isError: true,
+    }
+  }
+
+  const normalizedExpression = expression
+    .replaceAll(variableSymbol.toUpperCase(), variableSymbol)
+    .replace(/\^2/g, '²')
+  const expressionParts = normalizedExpression.split('=')
+
+  if (expressionParts.length !== 2) {
+    return {
+      resultText: 'Denklem bir adet "=" içermelidir.',
+      isError: true,
+    }
+  }
+
+  const [leftSide, rightSide] = expressionParts
+  if (leftSide === '' || rightSide === '') {
+    return {
+      resultText: 'Eşitliğin her iki tarafında da ifade olmalıdır.',
+      isError: true,
+    }
+  }
+
+  const normalizeTerms = (sideExpression: string): string[] => {
+    const withLeadingSign = /^[+-]/.test(sideExpression) ? sideExpression : `+${sideExpression}`
+    return withLeadingSign.match(/[+-][^+-]+/g) ?? []
+  }
+
+  type Coefficients = {
+    a: number
+    b: number
+    c: number
+  }
+
+  const parseSide = (sideExpression: string): Coefficients | null => {
+    const terms = normalizeTerms(sideExpression)
+    if (terms.length === 0) {
+      return null
+    }
+
+    let coefficientA = 0
+    let coefficientB = 0
+    let coefficientC = 0
+
+    for (const term of terms) {
+      if (term.includes(`${variableSymbol}²`)) {
+        const rawCoefficient = term.replace(`${variableSymbol}²`, '').replace('²', '')
+        const parsedCoefficient =
+          rawCoefficient === '+' || rawCoefficient === ''
+            ? 1
+            : rawCoefficient === '-'
+              ? -1
+              : Number(rawCoefficient)
+
+        if (!Number.isFinite(parsedCoefficient)) {
+          return null
+        }
+
+        coefficientA += parsedCoefficient
+        continue
+      }
+
+      if (term.includes(variableSymbol)) {
+        const rawCoefficient = term.replace(variableSymbol, '')
+        const parsedCoefficient =
+          rawCoefficient === '+' || rawCoefficient === ''
+            ? 1
+            : rawCoefficient === '-'
+              ? -1
+              : Number(rawCoefficient)
+
+        if (!Number.isFinite(parsedCoefficient)) {
+          return null
+        }
+
+        coefficientB += parsedCoefficient
+        continue
+      }
+
+      const parsedConstant = Number(term)
+      if (!Number.isFinite(parsedConstant)) {
+        return null
+      }
+
+      coefficientC += parsedConstant
+    }
+
+    return {
+      a: coefficientA,
+      b: coefficientB,
+      c: coefficientC,
+    }
+  }
+
+  const leftCoefficients = parseSide(leftSide)
+  const rightCoefficients = parseSide(rightSide)
+  if (!leftCoefficients || !rightCoefficients) {
+    return {
+      resultText: `Denklem formatı geçersiz. Örn: 5${variableSymbol}²+3${variableSymbol}=8`,
+      isError: true,
+    }
+  }
+
+  const coefficientA = leftCoefficients.a - rightCoefficients.a
+  const coefficientB = leftCoefficients.b - rightCoefficients.b
+  const coefficientC = leftCoefficients.c - rightCoefficients.c
+  const epsilon = 1e-10
+  const isAlmostZero = (value: number): boolean => Math.abs(value) < epsilon
+  const formatValue = (value: number): string => Number.parseFloat(value.toPrecision(12)).toString()
+
+  if (isAlmostZero(coefficientA)) {
+    if (isAlmostZero(coefficientB)) {
+      if (isAlmostZero(coefficientC)) {
+        return {
+          resultText: 'Sonsuz çözüm var (özdeş denklem).',
+          isError: false,
+        }
+      }
+
+      return {
+        resultText: 'Çözümsüz denklem.',
+        isError: true,
+      }
+    }
+
+    const linearRoot = -coefficientC / coefficientB
+    if (!Number.isFinite(linearRoot)) {
+      return {
+        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    return {
+      resultText: `${variableSymbol} = ${formatValue(linearRoot)}`,
+      isError: false,
+    }
+  }
+
+  const delta = coefficientB ** 2 - 4 * coefficientA * coefficientC
+  if (delta > epsilon) {
+    const sqrtDelta = Math.sqrt(delta)
+    const root1 = (-coefficientB + sqrtDelta) / (2 * coefficientA)
+    const root2 = (-coefficientB - sqrtDelta) / (2 * coefficientA)
+
+    if (!Number.isFinite(root1) || !Number.isFinite(root2)) {
+      return {
+        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    return {
+      resultText: `${variableSymbol}₁ = ${formatValue(root1)}, ${variableSymbol}₂ = ${formatValue(root2)}`,
+      isError: false,
+    }
+  }
+
+  if (isAlmostZero(delta)) {
+    const repeatedRoot = -coefficientB / (2 * coefficientA)
+    if (!Number.isFinite(repeatedRoot)) {
+      return {
+        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    return {
+      resultText: `${variableSymbol} = ${formatValue(repeatedRoot)}`,
+      isError: false,
+    }
+  }
+
+  return {
+    resultText: 'Gerçek sayılarda kök yok (Δ < 0).',
+    isError: true,
+  }
+}
+
 // localStorage okuma işini tek yerde topluyoruz.
 // Not: Burada veritabanı yok; geçmiş sadece kullanıcının tarayıcısında saklanır.
 // Bu yüzden uygulamayı kapatıp açınca (aynı tarayıcı/origin'de) history geri gelir.
@@ -426,6 +619,7 @@ function App() {
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
+  const [isQuadraticModeActive, setIsQuadraticModeActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
@@ -439,7 +633,10 @@ function App() {
     flashVirtualKey: (key: string) => void
     handleEqual: () => void
     handleOperatorSelect: (operator: Operator) => void
+    enterQuadraticModeWithToken: (token: string) => void
+    solveQuadraticEquationFromDisplay: () => void
     isExpressionInputActive: boolean
+    isQuadraticModeActive: boolean
     isShortcutHelpOpen: boolean
   } | null>(null)
 
@@ -752,11 +949,48 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(true)
+    setIsQuadraticModeActive(false)
+  }
+
+  const enterQuadraticModeWithToken = (token: string) => {
+    const normalizedToken = token === '^2' ? '²' : token
+    const canReuseCurrentDisplay = isQuadraticModeActive && displayValue !== '0'
+    const nextValue = `${canReuseCurrentDisplay ? displayValue : ''}${normalizedToken}`
+
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(false)
+    setIsExpressionInputActive(false)
+    setIsQuadraticModeActive(true)
+  }
+
+  const solveQuadraticEquationFromDisplay = () => {
+    const expressionText = displayValue.trim()
+    const { resultText, isError } = evaluateQuadraticExpression(expressionText, 'a')
+
+    setDisplayValue(resultText)
+    setLastPressedValue(expressionText)
+    addExpressionToHistory(expressionText, resultText, isError)
+
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
+    setIsQuadraticModeActive(false)
   }
 
   // Rakam butonları için giriş fonksiyonu.
   // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
   const appendDigit = (digit: string) => {
+    if (isQuadraticModeActive) {
+      enterQuadraticModeWithToken(digit)
+      return
+    }
+
     if (isExpressionInputActive) {
       appendExpressionToken(digit)
       return
@@ -767,6 +1001,7 @@ function App() {
       setLastPressedValue(digit)
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
+      setIsQuadraticModeActive(false)
       return
     }
 
@@ -774,6 +1009,7 @@ function App() {
       setDisplayValue(digit)
       setLastPressedValue(digit)
       setIsExpressionInputActive(false)
+      setIsQuadraticModeActive(false)
       return
     }
 
@@ -781,10 +1017,16 @@ function App() {
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
     setIsExpressionInputActive(false)
+    setIsQuadraticModeActive(false)
   }
 
   // Ondalık nokta ekleme işlemi.
   const appendDecimal = () => {
+    if (isQuadraticModeActive) {
+      enterQuadraticModeWithToken('.')
+      return
+    }
+
     if (isExpressionInputActive) {
       appendExpressionToken('.')
       return
@@ -795,6 +1037,7 @@ function App() {
       setLastPressedValue('0.')
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
+      setIsQuadraticModeActive(false)
       return
     }
 
@@ -803,6 +1046,7 @@ function App() {
       setDisplayValue(nextValue)
       setLastPressedValue(nextValue)
       setIsExpressionInputActive(false)
+      setIsQuadraticModeActive(false)
     }
   }
 
@@ -874,6 +1118,22 @@ function App() {
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
+    if (isQuadraticModeActive) {
+      if (
+        selectedOperator === '+' ||
+        selectedOperator === '-' ||
+        selectedOperator === '*' ||
+        selectedOperator === '/' ||
+        selectedOperator === '^'
+      ) {
+        enterQuadraticModeWithToken(selectedOperator)
+        return
+      }
+
+      setDisplayValue('Denklem modunda +, -, *, / ve ^ kullanılabilir.')
+      return
+    }
+
     if (isExpressionInputActive) {
       if (
         selectedOperator === '+' ||
@@ -936,11 +1196,17 @@ function App() {
     setPendingOperator(selectedOperator)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
+    setIsQuadraticModeActive(false)
   }
 
   // "=" butonu: bekleyen işlemi çalıştırır.
   const handleEqual = () => {
     setLastPressedValue('=')
+
+    if (isQuadraticModeActive || displayValue.includes('a')) {
+      solveQuadraticEquationFromDisplay()
+      return
+    }
 
     const shouldEvaluateExpression =
       isExpressionInputActive || displayValue.includes('(') || displayValue.includes(')')
@@ -957,6 +1223,7 @@ function App() {
       setCalculationJob(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
+      setIsQuadraticModeActive(false)
       return
     }
 
@@ -980,6 +1247,7 @@ function App() {
       setPendingOperator(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
+      setIsQuadraticModeActive(false)
       return
     }
 
@@ -1000,6 +1268,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(false)
+    setIsQuadraticModeActive(false)
   }
 
   // Hafıza (memory) tuşları:
@@ -1037,6 +1306,7 @@ function App() {
       return Number.isFinite(nextValue) ? nextValue : previousMemory
     })
     setLastPressedValue(direction === 'add' ? 'M+' : 'M-')
+    setIsQuadraticModeActive(false)
   }
 
   const usePiValue = () => {
@@ -1065,6 +1335,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
+    setIsQuadraticModeActive(false)
   }
 
   const formatHistoryTimestamp = (timestamp: number): string => {
@@ -1100,6 +1371,8 @@ function App() {
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
+          : isQuadraticModeActive
+            ? 'Denklem modu aktif: örn 5a^2+3a=8 yazıp Denklem Çöz veya = kullan.'
           : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
@@ -1121,7 +1394,10 @@ function App() {
       flashVirtualKey,
       handleEqual,
       handleOperatorSelect,
+      enterQuadraticModeWithToken,
+      solveQuadraticEquationFromDisplay,
       isExpressionInputActive,
+      isQuadraticModeActive,
       isShortcutHelpOpen,
     }
   })
@@ -1140,9 +1416,11 @@ function App() {
   // - p          => binde (‰) hesabı
   // - s          => kare alma (x²)
   // - i          => tersini alma (1/x)
-  // - a          => mutlak değer (|x|)
+  // - u          => mutlak değer (|x|)
   // - f          => faktöriyel (x!)
   // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
+  // - a          => denklem modunda değişken ekler
+  // - q          => ekrandaki ikinci derece denklemi çözer
   // - c          => C (temizle)
   // - Backspace  => son karakteri sil
   // - Delete     => C gibi tamamını temizle
@@ -1186,6 +1464,20 @@ function App() {
           event.preventDefault()
           setIsShortcutHelpOpen(false)
         }
+        return
+      }
+
+      if (lowerKey === 'q') {
+        event.preventDefault()
+        context.solveQuadraticEquationFromDisplay()
+        context.flashVirtualKey('solve-equation')
+        return
+      }
+
+      if (lowerKey === 'a') {
+        event.preventDefault()
+        context.enterQuadraticModeWithToken('a')
+        context.flashVirtualKey('a')
         return
       }
 
@@ -1331,7 +1623,7 @@ function App() {
         return
       }
 
-      if (lowerKey === 'a') {
+      if (lowerKey === 'u') {
         event.preventDefault()
         context.handleOperatorSelect('|x|')
         context.flashVirtualKey('|x|')
@@ -1401,7 +1693,7 @@ function App() {
         </div>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
-          binde, kare, ters, mutlak değer, faktöriyel ve mod
+          binde, kare, ters, mutlak değer, faktöriyel, mod ve ikinci derece denklem
         </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
@@ -1447,6 +1739,13 @@ function App() {
                 onClick={() => appendExpressionToken(')')}
               >
                 )
+              </button>
+              <button
+                type="button"
+                className={`operator-button variable ${activeVirtualKey === 'a' ? 'key-pressed' : ''}`}
+                onClick={() => enterQuadraticModeWithToken('a')}
+              >
+                a
               </button>
             </div>
           </div>
@@ -1602,6 +1901,14 @@ function App() {
             >
               ⌫
             </button>
+            <button
+              type="button"
+              className={`secondary ${activeVirtualKey === 'solve-equation' ? 'key-pressed' : ''}`}
+              onClick={solveQuadraticEquationFromDisplay}
+              aria-label="İkinci derece denklemi çöz"
+            >
+              Denklem Çöz
+            </button>
           </div>
 
         </div>
@@ -1708,6 +2015,12 @@ function App() {
               <li>
                 <kbd>(</kbd> <kbd>)</kbd> : Parantezli ifadede grup önceliği
               </li>
+              <li>
+                <kbd>A</kbd> : Denklem modunda değişken ekler
+              </li>
+              <li>
+                <kbd>Q</kbd> : Ekrandaki ikinci derece denklemi çözer
+              </li>
               <li className="shortcut-section">
                 <strong>Bilimsel kısayollar:</strong>
               </li>
@@ -1742,7 +2055,7 @@ function App() {
                 <kbd>I</kbd> : Tersini alma (<code>1/x</code>)
               </li>
               <li>
-                <kbd>A</kbd> : Mutlak değer (<code>|x|</code>)
+                <kbd>U</kbd> : Mutlak değer (<code>|x|</code>)
               </li>
               <li>
                 <kbd>F</kbd> : Faktöriyel (<code>x!</code>)
