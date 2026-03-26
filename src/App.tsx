@@ -1111,6 +1111,21 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    keyboardContextRef.current = {
+      appendDecimal,
+      appendDigit,
+      appendExpressionToken,
+      backspaceDisplay,
+      clearAll,
+      flashVirtualKey,
+      handleEqual,
+      handleOperatorSelect,
+      isExpressionInputActive,
+      isShortcutHelpOpen,
+    }
+  })
+
   // Klavye desteği:
   // - 0..9       => sayı girişi
   // - . ,        => ondalık ayırıcı
@@ -1135,18 +1150,6 @@ function App() {
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
   // - H / ?      => mini klavye kısayol rehberini aç/kapat
   // Not: Ctrl/Meta/Alt kombinasyonlarını özellikle yakalamıyoruz.
-  keyboardContextRef.current = {
-    appendDecimal,
-    appendDigit,
-    appendExpressionToken,
-    backspaceDisplay,
-    clearAll,
-    flashVirtualKey,
-    handleEqual,
-    handleOperatorSelect,
-    isExpressionInputActive,
-    isShortcutHelpOpen,
-  }
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
