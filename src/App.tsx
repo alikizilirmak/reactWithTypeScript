@@ -1118,6 +1118,7 @@ function App() {
   // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
   // - c          => C (temizle)
   // - Backspace  => son karakteri sil
+  // - Delete     => C gibi tamamını temizle
   // - Enter / =  => sonucu hesapla
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
   // - H / ?      => mini klavye kısayol rehberini aç/kapat
@@ -1200,6 +1201,7 @@ function App() {
       if (event.key === 'Backspace') {
         event.preventDefault()
         backspaceDisplay()
+        flashVirtualKey('backspace')
         return
       }
 
@@ -1211,6 +1213,13 @@ function App() {
       }
 
       if (event.key === 'Escape') {
+        event.preventDefault()
+        clearAll()
+        flashVirtualKey('clear')
+        return
+      }
+
+      if (event.key === 'Delete') {
         event.preventDefault()
         clearAll()
         flashVirtualKey('clear')
@@ -1562,6 +1571,14 @@ function App() {
             >
               C
             </button>
+            <button
+              type="button"
+              className={`secondary ${activeVirtualKey === 'backspace' ? 'key-pressed' : ''}`}
+              onClick={backspaceDisplay}
+              aria-label="Son karakteri sil"
+            >
+              ⌫
+            </button>
           </div>
 
         </div>
@@ -1724,6 +1741,9 @@ function App() {
               </li>
               <li>
                 <kbd>Backspace</kbd> : Son girilen rakamı sil
+              </li>
+              <li>
+                <kbd>Delete</kbd> : C butonu gibi temizler
               </li>
               <li>
                 <kbd>Enter</kbd> / <kbd>=</kbd> : Hesapla
