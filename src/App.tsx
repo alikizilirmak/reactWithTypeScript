@@ -635,6 +635,7 @@ function App() {
     handleOperatorSelect: (operator: Operator) => void
     enterQuadraticModeWithToken: (token: string) => void
     solveQuadraticEquationFromDisplay: () => void
+    displayValue: string
     isExpressionInputActive: boolean
     isQuadraticModeActive: boolean
     isShortcutHelpOpen: boolean
@@ -1401,6 +1402,7 @@ function App() {
       handleOperatorSelect,
       enterQuadraticModeWithToken,
       solveQuadraticEquationFromDisplay,
+      displayValue,
       isExpressionInputActive,
       isQuadraticModeActive,
       isShortcutHelpOpen,
@@ -1537,8 +1539,17 @@ function App() {
 
       if (event.key === 'Enter') {
         event.preventDefault()
+        const currentDisplayValue = context.displayValue.toLowerCase()
+        const shouldSolveQuadratic = context.isQuadraticModeActive || currentDisplayValue.includes('a')
+
+        if (shouldSolveQuadratic) {
+          context.solveQuadraticEquationFromDisplay()
+          context.flashVirtualKey('solve-equation')
+          return
+        }
+
         context.handleEqual()
-        context.flashVirtualKey('solve-equation')
+        context.flashVirtualKey('=')
         return
       }
 
