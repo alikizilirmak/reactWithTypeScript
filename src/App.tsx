@@ -1133,7 +1133,10 @@ function App() {
       }
 
       if (selectedOperator === 'x²') {
-        enterQuadraticModeWithToken('a²')
+        const normalizedDisplay = displayValue.replace(/\s+/g, '')
+        const tokenForSquare =
+          normalizedDisplay.endsWith('a') || normalizedDisplay.endsWith('A') ? '²' : 'a²'
+        enterQuadraticModeWithToken(tokenForSquare)
         return
       }
 
