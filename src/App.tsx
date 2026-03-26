@@ -141,6 +141,251 @@ type QuadraticSolveResult = {
   isError: boolean
 }
 
+type QuadraticCoefficients = {
+  a: number
+  b: number
+  c: number
+}
+
+type QuadraticCoefficientsParseResult =
+  | {
+      isError: false
+      coefficientA: number
+      coefficientB: number
+      coefficientC: number
+      normalizedExpression: string
+    }
+  | {
+      isError: true
+      errorText: string
+    }
+
+type EquationGraphPoint = {
+  x: number
+  y: number
+}
+
+type EquationGraphData = {
+  expression: string
+  polynomialText: string
+  points: EquationGraphPoint[]
+  xMin: number
+  xMax: number
+  yMin: number
+  yMax: number
+}
+
+const formatCompactNumber = (value: number): string =>
+  Number.parseFloat(value.toPrecision(12)).toString()
+
+const formatQuadraticPolynomial = (
+  coefficientA: number,
+  coefficientB: number,
+  coefficientC: number,
+  variableSymbol = 'a',
+): string => {
+  const terms: string[] = []
+
+  const addTerm = (coefficient: number, suffix: string) => {
+    if (Math.abs(coefficient) < 1e-10) {
+      return
+    }
+
+    const absCoefficient = Math.abs(coefficient)
+    const hasSuffix = suffix !== ''
+    const coefficientText =
+      hasSuffix && Math.abs(absCoefficient - 1) < 1e-10 ? '' : formatCompactNumber(absCoefficient)
+    const termText = `${coefficientText}${suffix}`
+
+    if (terms.length === 0) {
+      terms.push(coefficient < 0 ? `-${termText}` : termText)
+      return
+    }
+
+    terms.push(`${coefficient < 0 ? '-' : '+'} ${termText}`)
+  }
+
+  addTerm(coefficientA, `${variableSymbol}²`)
+  addTerm(coefficientB, variableSymbol)
+  addTerm(coefficientC, '')
+
+  return terms.length > 0 ? terms.join(' ') : '0'
+}
+
+const parseQuadraticCoefficients = (
+  rawExpression: string,
+  variableSymbol = 'a',
+): QuadraticCoefficientsParseResult => {
+  const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
+  if (!expression) {
+    return {
+      isError: true,
+      errorText: `Lütfen ${variableSymbol} içeren bir denklem girin.`,
+    }
+  }
+
+  const normalizedExpression = expression
+    .replaceAll(variableSymbol.toUpperCase(), variableSymbol)
+    .replace(/\^2/g, '²')
+  const expressionParts = normalizedExpression.split('=')
+
+  if (expressionParts.length !== 2) {
+    return {
+      isError: true,
+      errorText: 'Denklem bir adet "=" içermelidir.',
+    }
+  }
+
+  const [leftSide, rightSide] = expressionParts
+  if (leftSide === '' || rightSide === '') {
+    return {
+      isError: true,
+      errorText: 'Eşitliğin her iki tarafında da ifade olmalıdır.',
+    }
+  }
+
+  const normalizeTerms = (sideExpression: string): string[] => {
+    const withLeadingSign = /^[+-]/.test(sideExpression) ? sideExpression : `+${sideExpression}`
+    return withLeadingSign.match(/[+-][^+-]+/g) ?? []
+  }
+
+  const parseSide = (sideExpression: string): QuadraticCoefficients | null => {
+    const terms = normalizeTerms(sideExpression)
+    if (terms.length === 0) {
+      return null
+    }
+
+    let coefficientA = 0
+    let coefficientB = 0
+    let coefficientC = 0
+
+    for (const term of terms) {
+      if (term.includes(`${variableSymbol}²`)) {
+        const rawCoefficient = term.replace(`${variableSymbol}²`, '').replace('²', '')
+        const parsedCoefficient =
+          rawCoefficient === '+' || rawCoefficient === ''
+            ? 1
+            : rawCoefficient === '-'
+              ? -1
+              : Number(rawCoefficient)
+
+        if (!Number.isFinite(parsedCoefficient)) {
+          return null
+        }
+
+        coefficientA += parsedCoefficient
+        continue
+      }
+
+      if (term.includes(variableSymbol)) {
+        const rawCoefficient = term.replace(variableSymbol, '')
+        const parsedCoefficient =
+          rawCoefficient === '+' || rawCoefficient === ''
+            ? 1
+            : rawCoefficient === '-'
+              ? -1
+              : Number(rawCoefficient)
+
+        if (!Number.isFinite(parsedCoefficient)) {
+          return null
+        }
+
+        coefficientB += parsedCoefficient
+        continue
+      }
+
+      const parsedConstant = Number(term)
+      if (!Number.isFinite(parsedConstant)) {
+        return null
+      }
+
+      coefficientC += parsedConstant
+    }
+
+    return {
+      a: coefficientA,
+      b: coefficientB,
+      c: coefficientC,
+    }
+  }
+
+  const leftCoefficients = parseSide(leftSide)
+  const rightCoefficients = parseSide(rightSide)
+  if (!leftCoefficients || !rightCoefficients) {
+    return {
+      isError: true,
+      errorText: `Denklem formatı geçersiz. Örn: 5${variableSymbol}²+3${variableSymbol}=8`,
+    }
+  }
+
+  return {
+    isError: false,
+    coefficientA: leftCoefficients.a - rightCoefficients.a,
+    coefficientB: leftCoefficients.b - rightCoefficients.b,
+    coefficientC: leftCoefficients.c - rightCoefficients.c,
+    normalizedExpression,
+  }
+}
+
+const buildQuadraticGraphData = (rawExpression: string, variableSymbol = 'a') => {
+  const parseResult = parseQuadraticCoefficients(rawExpression, variableSymbol)
+  if (parseResult.isError) {
+    return parseResult
+  }
+
+  const { coefficientA, coefficientB, coefficientC, normalizedExpression } = parseResult
+  const xMin = -10
+  const xMax = 10
+  const sampleCount = 241
+  const points: EquationGraphPoint[] = []
+
+  for (let index = 0; index < sampleCount; index += 1) {
+    const ratio = index / (sampleCount - 1)
+    const x = xMin + (xMax - xMin) * ratio
+    const y = coefficientA * x ** 2 + coefficientB * x + coefficientC
+
+    if (!Number.isFinite(y)) {
+      continue
+    }
+
+    points.push({ x, y })
+  }
+
+  if (points.length < 2) {
+    return {
+      isError: true as const,
+      errorText: 'Grafik çizilemedi. Denklem değerlerini kontrol edin.',
+    }
+  }
+
+  const yValues = points.map((point) => point.y)
+  const rawYMin = Math.min(...yValues)
+  const rawYMax = Math.max(...yValues)
+  const hasFlatRange = Math.abs(rawYMax - rawYMin) < 1e-10
+  const fallbackRange = hasFlatRange
+    ? { min: rawYMin - 1, max: rawYMax + 1 }
+    : { min: rawYMin, max: rawYMax }
+  const yPadding = (fallbackRange.max - fallbackRange.min) * 0.1
+
+  return {
+    isError: false as const,
+    data: {
+      expression: normalizedExpression,
+      polynomialText: formatQuadraticPolynomial(
+        coefficientA,
+        coefficientB,
+        coefficientC,
+        variableSymbol,
+      ),
+      points,
+      xMin,
+      xMax,
+      yMin: fallbackRange.min - yPadding,
+      yMax: fallbackRange.max + yPadding,
+    },
+  }
+}
+
 const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvaluationResult => {
   const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
   if (!expression) {
@@ -385,120 +630,17 @@ const evaluateQuadraticExpression = (
   rawExpression: string,
   variableSymbol = 'a',
 ): QuadraticSolveResult => {
-  const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
-  if (!expression) {
+  const parseResult = parseQuadraticCoefficients(rawExpression, variableSymbol)
+  if (parseResult.isError) {
     return {
-      resultText: `Lütfen ${variableSymbol} içeren bir denklem girin.`,
+      resultText: parseResult.errorText,
       isError: true,
     }
   }
 
-  const normalizedExpression = expression
-    .replaceAll(variableSymbol.toUpperCase(), variableSymbol)
-    .replace(/\^2/g, '²')
-  const expressionParts = normalizedExpression.split('=')
-
-  if (expressionParts.length !== 2) {
-    return {
-      resultText: 'Denklem bir adet "=" içermelidir.',
-      isError: true,
-    }
-  }
-
-  const [leftSide, rightSide] = expressionParts
-  if (leftSide === '' || rightSide === '') {
-    return {
-      resultText: 'Eşitliğin her iki tarafında da ifade olmalıdır.',
-      isError: true,
-    }
-  }
-
-  const normalizeTerms = (sideExpression: string): string[] => {
-    const withLeadingSign = /^[+-]/.test(sideExpression) ? sideExpression : `+${sideExpression}`
-    return withLeadingSign.match(/[+-][^+-]+/g) ?? []
-  }
-
-  type Coefficients = {
-    a: number
-    b: number
-    c: number
-  }
-
-  const parseSide = (sideExpression: string): Coefficients | null => {
-    const terms = normalizeTerms(sideExpression)
-    if (terms.length === 0) {
-      return null
-    }
-
-    let coefficientA = 0
-    let coefficientB = 0
-    let coefficientC = 0
-
-    for (const term of terms) {
-      if (term.includes(`${variableSymbol}²`)) {
-        const rawCoefficient = term.replace(`${variableSymbol}²`, '').replace('²', '')
-        const parsedCoefficient =
-          rawCoefficient === '+' || rawCoefficient === ''
-            ? 1
-            : rawCoefficient === '-'
-              ? -1
-              : Number(rawCoefficient)
-
-        if (!Number.isFinite(parsedCoefficient)) {
-          return null
-        }
-
-        coefficientA += parsedCoefficient
-        continue
-      }
-
-      if (term.includes(variableSymbol)) {
-        const rawCoefficient = term.replace(variableSymbol, '')
-        const parsedCoefficient =
-          rawCoefficient === '+' || rawCoefficient === ''
-            ? 1
-            : rawCoefficient === '-'
-              ? -1
-              : Number(rawCoefficient)
-
-        if (!Number.isFinite(parsedCoefficient)) {
-          return null
-        }
-
-        coefficientB += parsedCoefficient
-        continue
-      }
-
-      const parsedConstant = Number(term)
-      if (!Number.isFinite(parsedConstant)) {
-        return null
-      }
-
-      coefficientC += parsedConstant
-    }
-
-    return {
-      a: coefficientA,
-      b: coefficientB,
-      c: coefficientC,
-    }
-  }
-
-  const leftCoefficients = parseSide(leftSide)
-  const rightCoefficients = parseSide(rightSide)
-  if (!leftCoefficients || !rightCoefficients) {
-    return {
-      resultText: `Denklem formatı geçersiz. Örn: 5${variableSymbol}²+3${variableSymbol}=8`,
-      isError: true,
-    }
-  }
-
-  const coefficientA = leftCoefficients.a - rightCoefficients.a
-  const coefficientB = leftCoefficients.b - rightCoefficients.b
-  const coefficientC = leftCoefficients.c - rightCoefficients.c
+  const { coefficientA, coefficientB, coefficientC } = parseResult
   const epsilon = 1e-10
   const isAlmostZero = (value: number): boolean => Math.abs(value) < epsilon
-  const formatValue = (value: number): string => Number.parseFloat(value.toPrecision(12)).toString()
 
   if (isAlmostZero(coefficientA)) {
     if (isAlmostZero(coefficientB)) {
@@ -524,7 +666,7 @@ const evaluateQuadraticExpression = (
     }
 
     return {
-      resultText: `${variableSymbol} = ${formatValue(linearRoot)}`,
+      resultText: `${variableSymbol} = ${formatCompactNumber(linearRoot)}`,
       isError: false,
     }
   }
@@ -543,7 +685,7 @@ const evaluateQuadraticExpression = (
     }
 
     return {
-      resultText: `${variableSymbol}₁ = ${formatValue(root1)}, ${variableSymbol}₂ = ${formatValue(root2)}`,
+      resultText: `${variableSymbol}₁ = ${formatCompactNumber(root1)}, ${variableSymbol}₂ = ${formatCompactNumber(root2)}`,
       isError: false,
     }
   }
@@ -558,7 +700,7 @@ const evaluateQuadraticExpression = (
     }
 
     return {
-      resultText: `${variableSymbol} = ${formatValue(repeatedRoot)}`,
+      resultText: `${variableSymbol} = ${formatCompactNumber(repeatedRoot)}`,
       isError: false,
     }
   }
@@ -633,6 +775,9 @@ function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
+  const [isEquationGraphOpen, setIsEquationGraphOpen] = useState<boolean>(false)
+  const [equationGraphData, setEquationGraphData] = useState<EquationGraphData | null>(null)
+  const [equationGraphError, setEquationGraphError] = useState<string>('')
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
@@ -1012,6 +1157,22 @@ function App() {
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
     setIsQuadraticModeActive(false)
+  }
+
+  const openEquationGraphFromDisplay = () => {
+    const expressionText = displayValue.trim()
+    const graphResult = buildQuadraticGraphData(expressionText, 'a')
+
+    if (graphResult.isError) {
+      setEquationGraphData(null)
+      setEquationGraphError(graphResult.errorText)
+      setIsEquationGraphOpen(true)
+      return
+    }
+
+    setEquationGraphData(graphResult.data)
+    setEquationGraphError('')
+    setIsEquationGraphOpen(true)
   }
 
   // Rakam butonları için giriş fonksiyonu.
@@ -1436,8 +1597,8 @@ function App() {
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
           : isQuadraticModeActive
-            ? 'Denklem modu aktif: örn 5a^2+3a=8 yazıp Denklem Çöz veya = kullan.'
-          : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
+            ? 'Denklem modu aktif: örn 5a^2+3a=8 yazıp Enter/Q ile çöz, Grafik ile çiz.'
+            : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
   useEffect(() => {
@@ -1828,6 +1989,13 @@ function App() {
               >
                 a
               </button>
+              <button
+                type="button"
+                className="operator-button graph"
+                onClick={openEquationGraphFromDisplay}
+              >
+                Grafik
+              </button>
             </div>
           </div>
 
@@ -2171,6 +2339,94 @@ function App() {
               </li>
             </ul>
             <button type="button" onClick={() => setIsShortcutHelpOpen(false)}>
+              Kapat
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isEquationGraphOpen && (
+        <div
+          className="graph-backdrop"
+          role="presentation"
+          onClick={() => setIsEquationGraphOpen(false)}
+        >
+          <div
+            className="graph-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Denklem grafiği"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3>Denklem Grafiği</h3>
+            {equationGraphData ? (
+              <>
+                <p className="graph-summary">
+                  Denklem: <code>{equationGraphData.expression}</code>
+                </p>
+                <p className="graph-summary">
+                  Grafiği çizilen fonksiyon: <code>y = {equationGraphData.polynomialText}</code>
+                </p>
+                <div className="graph-board" role="img" aria-label="Koordinat düzleminde denklem grafiği">
+                  <svg viewBox="0 0 360 260" preserveAspectRatio="none">
+                    {(() => {
+                      const width = 360
+                      const height = 260
+                      const rangeX = equationGraphData.xMax - equationGraphData.xMin
+                      const rangeY = equationGraphData.yMax - equationGraphData.yMin
+                      const toSvgX = (x: number) =>
+                        ((x - equationGraphData.xMin) / rangeX) * width
+                      const toSvgY = (y: number) =>
+                        height - ((y - equationGraphData.yMin) / rangeY) * height
+                      const graphPath = equationGraphData.points
+                        .map((point, index) => {
+                          const command = index === 0 ? 'M' : 'L'
+                          return `${command} ${toSvgX(point.x)} ${toSvgY(point.y)}`
+                        })
+                        .join(' ')
+                      const xAxisVisible =
+                        equationGraphData.yMin <= 0 && equationGraphData.yMax >= 0
+                      const yAxisVisible =
+                        equationGraphData.xMin <= 0 && equationGraphData.xMax >= 0
+                      const xAxisY = toSvgY(0)
+                      const yAxisX = toSvgX(0)
+
+                      return (
+                        <>
+                          <rect x="0" y="0" width={width} height={height} className="graph-bg" />
+                          {xAxisVisible && (
+                            <line
+                              x1="0"
+                              y1={xAxisY}
+                              x2={width}
+                              y2={xAxisY}
+                              className="graph-axis"
+                            />
+                          )}
+                          {yAxisVisible && (
+                            <line
+                              x1={yAxisX}
+                              y1="0"
+                              x2={yAxisX}
+                              y2={height}
+                              className="graph-axis"
+                            />
+                          )}
+                          <path d={graphPath} className="graph-curve" />
+                        </>
+                      )
+                    })()}
+                  </svg>
+                </div>
+                <p className="graph-range">
+                  a aralığı: [{equationGraphData.xMin}, {equationGraphData.xMax}] | y aralığı:{' '}
+                  [{formatCompactNumber(equationGraphData.yMin)}, {formatCompactNumber(equationGraphData.yMax)}]
+                </p>
+              </>
+            ) : (
+              <p className="graph-error">{equationGraphError || 'Grafik oluşturulamadı.'}</p>
+            )}
+            <button type="button" onClick={() => setIsEquationGraphOpen(false)}>
               Kapat
             </button>
           </div>
