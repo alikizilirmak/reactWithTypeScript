@@ -14,7 +14,7 @@ import {
 type HistoryItem = {
   firstValue: string
   secondValue: string
-  operator: Operator | 'expr' | 'eq2'
+  operator: Operator | 'expr'
   result: string
   expression: string
   isError: boolean
@@ -46,7 +46,6 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
 const VALID_HISTORY_OPERATORS: ReadonlySet<HistoryItem['operator']> = new Set([
   ...VALID_OPERATORS,
   'expr',
-  'eq2',
 ])
 const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
   'ln',
@@ -360,6 +359,186 @@ const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvalu
   }
 }
 
+
+const evaluateQuadraticExpression = (rawExpression: string): QuadraticSolveResult => {
+  const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
+  if (!expression) {
+    return {
+      resultText: 'Lütfen ax²+bx+c=0 biçiminde bir denklem girin.',
+      isError: true,
+    }
+  }
+
+  const normalizedExpression = expression.replace(/\^2/g, '²').replace(/[yY]/g, 'x')
+  const expressionParts = normalizedExpression.split('=')
+  if (expressionParts.length !== 2) {
+    return {
+      resultText: 'Denklem bir adet "=" içermelidir.',
+      isError: true,
+    }
+  }
+
+  const [leftSide, rightSide] = expressionParts
+  if (leftSide === '' || rightSide === '') {
+    return {
+      resultText: 'Eşitliğin her iki tarafında da ifade olmalıdır.',
+      isError: true,
+    }
+  }
+
+  const normalizeTerms = (sideExpression: string): string[] => {
+    const withLeadingSign = /^[+-]/.test(sideExpression)
+      ? sideExpression
+      : `+${sideExpression}`
+    return withLeadingSign.match(/[+-][^+-]+/g) ?? []
+  }
+
+  type Coefficients = {
+    a: number
+    b: number
+    c: number
+  }
+
+  const parseSide = (sideExpression: string): Coefficients | null => {
+    const terms = normalizeTerms(sideExpression)
+    if (terms.length === 0) {
+      return null
+    }
+
+    let a = 0
+    let b = 0
+    let c = 0
+
+    for (const term of terms) {
+      if (term.includes('²')) {
+        const rawCoefficient = term.replace('x²', '').replace('²', '')
+        const parsedCoefficient =
+          rawCoefficient === '+' || rawCoefficient === ''
+            ? 1
+            : rawCoefficient === '-'
+              ? -1
+              : Number(rawCoefficient)
+
+        if (!Number.isFinite(parsedCoefficient)) {
+          return null
+        }
+
+        a += parsedCoefficient
+        continue
+      }
+
+      if (term.includes('x')) {
+        const rawCoefficient = term.replace('x', '')
+        const parsedCoefficient =
+          rawCoefficient === '+' || rawCoefficient === ''
+            ? 1
+            : rawCoefficient === '-'
+              ? -1
+              : Number(rawCoefficient)
+
+        if (!Number.isFinite(parsedCoefficient)) {
+          return null
+        }
+
+        b += parsedCoefficient
+        continue
+      }
+
+      const parsedConstant = Number(term)
+      if (!Number.isFinite(parsedConstant)) {
+        return null
+      }
+
+      c += parsedConstant
+    }
+
+    return { a, b, c }
+  }
+
+  const leftCoefficients = parseSide(leftSide)
+  const rightCoefficients = parseSide(rightSide)
+  if (!leftCoefficients || !rightCoefficients) {
+    return {
+      resultText: 'Denklem formatı geçersiz. Örn: 2x²-4x-6=0',
+      isError: true,
+    }
+  }
+
+  const a = leftCoefficients.a - rightCoefficients.a
+  const b = leftCoefficients.b - rightCoefficients.b
+  const c = leftCoefficients.c - rightCoefficients.c
+  const epsilon = 1e-10
+  const isAlmostZero = (value: number) => Math.abs(value) < epsilon
+
+  if (isAlmostZero(a)) {
+    if (isAlmostZero(b)) {
+      if (isAlmostZero(c)) {
+        return {
+          resultText: 'Sonsuz çözüm var (özdeş denklem).',
+          isError: false,
+        }
+      }
+
+      return {
+        resultText: 'Çözümsüz denklem.',
+        isError: true,
+      }
+    }
+
+    const linearRoot = -c / b
+    if (!Number.isFinite(linearRoot)) {
+      return {
+        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    return {
+      resultText: `Lineer kök: x = ${linearRoot.toString()}`,
+      isError: false,
+    }
+  }
+
+  const delta = b ** 2 - 4 * a * c
+  if (delta > epsilon) {
+    const sqrtDelta = Math.sqrt(delta)
+    const x1 = (-b + sqrtDelta) / (2 * a)
+    const x2 = (-b - sqrtDelta) / (2 * a)
+
+    if (!Number.isFinite(x1) || !Number.isFinite(x2)) {
+      return {
+        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    return {
+      resultText: `x₁ = ${x1.toString()}, x₂ = ${x2.toString()}`,
+      isError: false,
+    }
+  }
+
+  if (isAlmostZero(delta)) {
+    const repeatedRoot = -b / (2 * a)
+    if (!Number.isFinite(repeatedRoot)) {
+      return {
+        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
+        isError: true,
+      }
+    }
+
+    return {
+      resultText: `Çakışık kök: x = ${repeatedRoot.toString()}`,
+      isError: false,
+    }
+  }
+
+  return {
+    resultText: 'Gerçek sayılarda kök yok (Δ < 0).',
+    isError: true,
+  }
+}
+
 // localStorage okuma işini tek yerde topluyoruz.
 // Not: Burada veritabanı yok; geçmiş sadece kullanıcının tarayıcısında saklanır.
 // Bu yüzden uygulamayı kapatıp açınca (aynı tarayıcı/origin'de) history geri gelir.
@@ -411,22 +590,10 @@ type CalculationJob = {
 }
 
 type HistoryFilter = 'all' | 'success' | 'error' | 'expression'
-type EquationCoefficients = {
-  a: string
-  b: string
-  c: string
-  d: string
-  e: string
-  f: string
-}
 
-const INITIAL_EQUATION_COEFFICIENTS: EquationCoefficients = {
-  a: '',
-  b: '',
-  c: '',
-  d: '',
-  e: '',
-  f: '',
+type QuadraticSolveResult = {
+  resultText: string
+  isError: boolean
 }
 
 function App() {
@@ -445,11 +612,7 @@ function App() {
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
-  const [equationCoefficients, setEquationCoefficients] = useState<EquationCoefficients>(
-    INITIAL_EQUATION_COEFFICIENTS,
-  )
-  const [equationResultText, setEquationResultText] = useState<string>('')
-  const [isEquationResultError, setIsEquationResultError] = useState<boolean>(false)
+  const [isEquationModeActive, setIsEquationModeActive] = useState<boolean>(false)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
   const keyFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -462,7 +625,10 @@ function App() {
     flashVirtualKey: (key: string) => void
     handleEqual: () => void
     handleOperatorSelect: (operator: Operator) => void
+    enterEquationModeWithToken: (token: string) => void
+    solveQuadraticEquationFromDisplay: () => void
     isExpressionInputActive: boolean
+    isEquationModeActive: boolean
     isShortcutHelpOpen: boolean
   } | null>(null)
 
@@ -509,13 +675,6 @@ function App() {
     return Number.isFinite(parsedValue) ? parsedValue : null
   }
 
-  const parseEquationCoefficient = (rawValue: string): number | null => {
-    const normalizedValue = rawValue.replaceAll(',', '.').trim()
-    if (normalizedValue === '') {
-      return 0
-    }
-    return parseNumberInput(normalizedValue)
-  }
 
   // Hesap makinesinde kullanacağımız sayıları "ekran dostu" kısa formata çevirir.
   // Böylece pi/e gibi değerler gereksiz uzun görünmez.
@@ -541,6 +700,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
   }
 
   // Geçmişte görünürken boş değerleri daha anlaşılır göstermek için yardımcı fonksiyon.
@@ -668,32 +828,6 @@ function App() {
     })
   }
 
-  const addEquationToHistory = (
-    firstEquation: string,
-    secondEquation: string,
-    resultText: string,
-    isError: boolean,
-  ) => {
-    const historyItem: HistoryItem = {
-      firstValue: firstEquation,
-      secondValue: secondEquation,
-      operator: 'eq2',
-      result: resultText,
-      isError,
-      createdAt: Date.now(),
-      expression: `${firstEquation}; ${secondEquation} => ${resultText}`,
-    }
-
-    setHistory((previousHistory) => {
-      const nextHistory = [historyItem, ...previousHistory]
-      if (nextHistory.length > MAX_HISTORY_ITEMS) {
-        nextHistory.length = MAX_HISTORY_ITEMS
-      }
-
-      return nextHistory
-    })
-  }
-
   // Sayısal senaryolarda helper: number değerleri string'e çevirip history'e ekler.
   const addToHistory = (
     first: number,
@@ -809,11 +943,61 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(true)
+    setIsEquationModeActive(false)
+  }
+
+
+  const enterEquationModeWithToken = (token: string) => {
+    const baseExpression = isEquationModeActive && displayValue !== '0' ? displayValue : ''
+    const nextValue = `${baseExpression}${token}`
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(false)
+    setIsExpressionInputActive(false)
+    setIsEquationModeActive(true)
+  }
+
+  const solveQuadraticEquationFromDisplay = () => {
+    const expressionText = displayValue.trim()
+    const { resultText, isError } = evaluateQuadraticExpression(expressionText)
+
+    setDisplayValue(resultText)
+    setLastPressedValue(expressionText)
+    addExpressionToHistory(expressionText, resultText, isError)
+
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
+  }
+
+  const appendEquationToken = (token: string) => {
+    const normalizedToken = token === ',' ? '.' : token
+    const baseExpression = isEquationModeActive && displayValue !== '0' ? displayValue : ''
+    const nextValue = `${baseExpression}${normalizedToken}`
+    setDisplayValue(nextValue)
+    setLastPressedValue(nextValue)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(false)
+    setIsExpressionInputActive(false)
+    setIsEquationModeActive(true)
   }
 
   // Rakam butonları için giriş fonksiyonu.
   // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
   const appendDigit = (digit: string) => {
+    if (isEquationModeActive) {
+      appendEquationToken(digit)
+      return
+    }
+
     if (isExpressionInputActive) {
       appendExpressionToken(digit)
       return
@@ -824,6 +1008,7 @@ function App() {
       setLastPressedValue(digit)
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
+      setIsEquationModeActive(false)
       return
     }
 
@@ -831,6 +1016,7 @@ function App() {
       setDisplayValue(digit)
       setLastPressedValue(digit)
       setIsExpressionInputActive(false)
+      setIsEquationModeActive(false)
       return
     }
 
@@ -838,10 +1024,16 @@ function App() {
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
     setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
   }
 
   // Ondalık nokta ekleme işlemi.
   const appendDecimal = () => {
+    if (isEquationModeActive) {
+      appendEquationToken('.')
+      return
+    }
+
     if (isExpressionInputActive) {
       appendExpressionToken('.')
       return
@@ -852,6 +1044,7 @@ function App() {
       setLastPressedValue('0.')
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
+      setIsEquationModeActive(false)
       return
     }
 
@@ -885,6 +1078,20 @@ function App() {
 
   // Backspace davranışı: son girilen karakteri siler.
   const backspaceDisplay = () => {
+    if (isEquationModeActive) {
+      if (displayValue.length <= 1) {
+        setDisplayValue('0')
+        setLastPressedValue('')
+        setIsEquationModeActive(false)
+        return
+      }
+
+      const nextValue = displayValue.slice(0, -1)
+      setDisplayValue(nextValue)
+      setLastPressedValue(nextValue)
+      return
+    }
+
     if (isExpressionInputActive) {
       if (displayValue.length <= 1) {
         setDisplayValue('0')
@@ -926,11 +1133,33 @@ function App() {
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
     setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
   }
 
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
+    if (isEquationModeActive) {
+      if (
+        selectedOperator === '+' ||
+        selectedOperator === '-' ||
+        selectedOperator === '*' ||
+        selectedOperator === '/' ||
+        selectedOperator === '^'
+      ) {
+        appendEquationToken(selectedOperator)
+        return
+      }
+
+      if (selectedOperator === 'x²') {
+        appendEquationToken('²')
+        return
+      }
+
+      setDisplayValue('Denklem modunda +, -, *, /, ^ ve x² kullanılabilir.')
+      return
+    }
+
     if (isExpressionInputActive) {
       if (
         selectedOperator === '+' ||
@@ -974,6 +1203,7 @@ function App() {
       setPendingOperator(selectedOperator)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
+      setIsEquationModeActive(false)
       return
     }
 
@@ -993,11 +1223,20 @@ function App() {
     setPendingOperator(selectedOperator)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
   }
 
   // "=" butonu: bekleyen işlemi çalıştırır.
   const handleEqual = () => {
     setLastPressedValue('=')
+
+    const shouldSolveQuadratic =
+      isEquationModeActive || (displayValue.includes('=') && /[xyXY]/.test(displayValue))
+
+    if (shouldSolveQuadratic) {
+      solveQuadraticEquationFromDisplay()
+      return
+    }
 
     const shouldEvaluateExpression =
       isExpressionInputActive || displayValue.includes('(') || displayValue.includes(')')
@@ -1014,6 +1253,7 @@ function App() {
       setCalculationJob(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
+      setIsEquationModeActive(false)
       return
     }
 
@@ -1037,6 +1277,7 @@ function App() {
       setPendingOperator(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
+      setIsEquationModeActive(false)
       return
     }
 
@@ -1057,6 +1298,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
   }
 
   // Hafıza (memory) tuşları:
@@ -1094,6 +1336,7 @@ function App() {
       return Number.isFinite(nextValue) ? nextValue : previousMemory
     })
     setLastPressedValue(direction === 'add' ? 'M+' : 'M-')
+    setIsEquationModeActive(false)
   }
 
   const usePiValue = () => {
@@ -1102,84 +1345,6 @@ function App() {
 
   const useEulerValue = () => {
     applyPreparedNumber(Math.E, 'e')
-  }
-
-  const updateEquationCoefficient = (
-    coefficientKey: keyof EquationCoefficients,
-    nextValue: string,
-  ) => {
-    const normalizedValue = nextValue.replaceAll(',', '.')
-    setEquationCoefficients((previousCoefficients) => ({
-      ...previousCoefficients,
-      [coefficientKey]: normalizedValue,
-    }))
-  }
-
-  const clearEquationSolver = () => {
-    setEquationCoefficients(INITIAL_EQUATION_COEFFICIENTS)
-    setEquationResultText('')
-    setIsEquationResultError(false)
-  }
-
-  const solveTwoVariableEquation = () => {
-    const { a: rawA, b: rawB, c: rawC, d: rawD, e: rawE, f: rawF } = equationCoefficients
-    const firstEquationText = `(${rawA.trim() || '0'})x + (${rawB.trim() || '0'})y = ${
-      rawC.trim() || '0'
-    }`
-    const secondEquationText = `(${rawD.trim() || '0'})x + (${rawE.trim() || '0'})y = ${
-      rawF.trim() || '0'
-    }`
-
-    const a = parseEquationCoefficient(rawA)
-    const b = parseEquationCoefficient(rawB)
-    const c = parseEquationCoefficient(rawC)
-    const d = parseEquationCoefficient(rawD)
-    const e = parseEquationCoefficient(rawE)
-    const f = parseEquationCoefficient(rawF)
-
-    if ([a, b, c, d, e, f].some((value) => value === null)) {
-      const errorText = 'Denklem katsayıları için geçerli sayılar girin.'
-      setEquationResultText(errorText)
-      setIsEquationResultError(true)
-      addEquationToHistory(firstEquationText, secondEquationText, errorText, true)
-      return
-    }
-
-    const determinant = (a as number) * (e as number) - (b as number) * (d as number)
-    const determinantX = (c as number) * (e as number) - (b as number) * (f as number)
-    const determinantY = (a as number) * (f as number) - (c as number) * (d as number)
-    const epsilon = 1e-10
-    const isAlmostZero = (value: number) => Math.abs(value) < epsilon
-    let resultText = ''
-    let isError = false
-
-    if (!isAlmostZero(determinant)) {
-      const x = determinantX / determinant
-      const y = determinantY / determinant
-
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        resultText = 'Denklem sonucu sayı sınırını aşıyor.'
-        isError = true
-      } else {
-        resultText = `x = ${formatNumberForDisplay(x)}, y = ${formatNumberForDisplay(y)}`
-      }
-    } else if (isAlmostZero(determinantX) && isAlmostZero(determinantY)) {
-      resultText = 'Sonsuz çözüm var (denklemler birbirinin katı).'
-    } else {
-      resultText = 'Çözümsüz sistem (denklemler çelişkili).'
-      isError = true
-    }
-
-    setEquationResultText(resultText)
-    setIsEquationResultError(isError)
-    setDisplayValue(resultText)
-    setLastPressedValue('2x2 denklem')
-    setStoredValue(null)
-    setPendingOperator(null)
-    setCalculationJob(null)
-    setIsWaitingForSecondValue(true)
-    setIsExpressionInputActive(false)
-    addEquationToHistory(firstEquationText, secondEquationText, resultText, isError)
   }
 
   const toggleThemeMode = () => {
@@ -1200,6 +1365,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
+    setIsEquationModeActive(false)
   }
 
   const formatHistoryTimestamp = (timestamp: number): string => {
@@ -1219,7 +1385,7 @@ function App() {
     }
 
     if (historyFilter === 'expression') {
-      return item.operator === 'expr' || item.operator === 'eq2'
+      return item.operator === 'expr'
     }
 
     return historyFilter === 'error' ? item.isError : !item.isError
@@ -1235,7 +1401,9 @@ function App() {
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
-          : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
+          : isEquationModeActive
+            ? 'Denklem modu aktif: ax²+bx+c=0 yazıp Denklem Çöz veya = kullan.'
+            : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
   useEffect(() => {
@@ -1256,7 +1424,10 @@ function App() {
       flashVirtualKey,
       handleEqual,
       handleOperatorSelect,
+      enterEquationModeWithToken,
+      solveQuadraticEquationFromDisplay,
       isExpressionInputActive,
+      isEquationModeActive,
       isShortcutHelpOpen,
     }
   })
@@ -1278,6 +1449,8 @@ function App() {
   // - a          => mutlak değer (|x|)
   // - f          => faktöriyel (x!)
   // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
+  // - x / y      => ikinci derece denklem modu için değişken ekler
+  // - q          => ekrandaki ikinci derece denklemi çözer
   // - c          => C (temizle)
   // - Backspace  => son karakteri sil
   // - Delete     => C gibi tamamını temizle
@@ -1324,6 +1497,27 @@ function App() {
         return
       }
 
+      if (lowerKey === 'x') {
+        event.preventDefault()
+        context.enterEquationModeWithToken('x')
+        context.flashVirtualKey('x')
+        return
+      }
+
+      if (lowerKey === 'y') {
+        event.preventDefault()
+        context.enterEquationModeWithToken('y')
+        context.flashVirtualKey('y')
+        return
+      }
+
+      if (lowerKey === 'q') {
+        event.preventDefault()
+        context.solveQuadraticEquationFromDisplay()
+        context.flashVirtualKey('solve-equation')
+        return
+      }
+
       if (lowerKey === 'c') {
         event.preventDefault()
         context.clearAll()
@@ -1335,6 +1529,7 @@ function App() {
         /^[0-9]$/.test(event.key) ||
         event.key === '.' ||
         event.key === ',' ||
+        event.key === '=' ||
         event.key === '+' ||
         event.key === '-' ||
         event.key === '*' ||
@@ -1343,7 +1538,10 @@ function App() {
         event.key === '(' ||
         event.key === ')'
       const shouldWriteExpressionToken =
-        context.isExpressionInputActive || event.key === '(' || event.key === ')'
+        context.isExpressionInputActive ||
+        context.isEquationModeActive ||
+        event.key === '(' ||
+        event.key === ')'
 
       if (isExpressionTokenKey && shouldWriteExpressionToken) {
         event.preventDefault()
@@ -1536,7 +1734,7 @@ function App() {
         </div>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
-          binde, kare, ters, mutlak değer, faktöriyel ve mod
+          binde, kare, ters, mutlak değer, faktöriyel, mod ve ikinci derece denklem
         </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
@@ -1553,97 +1751,6 @@ function App() {
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
 
-        <section className="equation-solver" aria-label="İki bilinmeyenli denklem çözücü">
-          <div className="equation-solver-head">
-            <h3>İki Bilinmeyenli Denklem Çözücü</h3>
-            <p>ax + by = c ve dx + ey = f biçimindeki sistemleri çözer.</p>
-          </div>
-
-          <div className="equation-form-row">
-            <span className="equation-row-label">1. denklem</span>
-            <div className="equation-inline-fields">
-              <input
-                id="equation-a"
-                type="text"
-                inputMode="decimal"
-                placeholder="a"
-                value={equationCoefficients.a}
-                onChange={(event) => updateEquationCoefficient('a', event.target.value)}
-              />
-              <span>x +</span>
-              <input
-                id="equation-b"
-                type="text"
-                inputMode="decimal"
-                placeholder="b"
-                value={equationCoefficients.b}
-                onChange={(event) => updateEquationCoefficient('b', event.target.value)}
-              />
-              <span>y =</span>
-              <input
-                id="equation-c"
-                type="text"
-                inputMode="decimal"
-                placeholder="c"
-                value={equationCoefficients.c}
-                onChange={(event) => updateEquationCoefficient('c', event.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="equation-form-row">
-            <span className="equation-row-label">2. denklem</span>
-            <div className="equation-inline-fields">
-              <input
-                id="equation-d"
-                type="text"
-                inputMode="decimal"
-                placeholder="d"
-                value={equationCoefficients.d}
-                onChange={(event) => updateEquationCoefficient('d', event.target.value)}
-              />
-              <span>x +</span>
-              <input
-                id="equation-e"
-                type="text"
-                inputMode="decimal"
-                placeholder="e"
-                value={equationCoefficients.e}
-                onChange={(event) => updateEquationCoefficient('e', event.target.value)}
-              />
-              <span>y =</span>
-              <input
-                id="equation-f"
-                type="text"
-                inputMode="decimal"
-                placeholder="f"
-                value={equationCoefficients.f}
-                onChange={(event) => updateEquationCoefficient('f', event.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="equation-actions">
-            <button type="button" className="equation-solve" onClick={solveTwoVariableEquation}>
-              Denklem Çöz
-            </button>
-            <button type="button" className="equation-clear" onClick={clearEquationSolver}>
-              Alanları Temizle
-            </button>
-          </div>
-
-          <p
-            className={`equation-result ${
-              equationResultText === ''
-                ? 'placeholder'
-                : isEquationResultError
-                  ? 'error'
-                  : 'success'
-            }`}
-          >
-            {equationResultText || 'Sonuç burada görünecek.'}
-          </p>
-        </section>
 
         {/* Bilimsel operatör + sabitler sayıların üstünde, hafıza + 4 işlem yan tarafta */}
         <div className="keypad-layout">
@@ -1674,6 +1781,20 @@ function App() {
                 onClick={() => appendExpressionToken(')')}
               >
                 )
+              </button>
+              <button
+                type="button"
+                className={`operator-button variable ${activeVirtualKey === 'x' ? 'key-pressed' : ''}`}
+                onClick={() => enterEquationModeWithToken('x')}
+              >
+                x
+              </button>
+              <button
+                type="button"
+                className={`operator-button variable ${activeVirtualKey === 'y' ? 'key-pressed' : ''}`}
+                onClick={() => enterEquationModeWithToken('y')}
+              >
+                y
               </button>
             </div>
           </div>
@@ -1829,6 +1950,14 @@ function App() {
             >
               ⌫
             </button>
+            <button
+              type="button"
+              className={`secondary ${activeVirtualKey === 'solve-equation' ? 'key-pressed' : ''}`}
+              onClick={solveQuadraticEquationFromDisplay}
+              aria-label="İkinci derece denklemi çöz"
+            >
+              Denklem Çöz
+            </button>
           </div>
 
         </div>
@@ -1874,7 +2003,7 @@ function App() {
             className={`history-filter ${historyFilter === 'expression' ? 'active' : ''}`}
             onClick={() => setHistoryFilter('expression')}
           >
-            İfade / Denklem
+            İfade
           </button>
         </div>
 
@@ -1934,6 +2063,12 @@ function App() {
               </li>
               <li>
                 <kbd>(</kbd> <kbd>)</kbd> : Parantezli ifadede grup önceliği
+              </li>
+              <li>
+                <kbd>X</kbd> / <kbd>Y</kbd> : Denklem modunda değişken ekler
+              </li>
+              <li>
+                <kbd>Q</kbd> : Ekrandaki ikinci derece denklemi çözer
               </li>
               <li className="shortcut-section">
                 <strong>Bilimsel kısayollar:</strong>
