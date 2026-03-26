@@ -430,6 +430,16 @@ function App() {
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
   const keyFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isExpressionInputActiveRef = useRef<boolean>(false)
+  const isShortcutHelpOpenRef = useRef<boolean>(false)
+  const appendExpressionTokenRef = useRef<(token: string) => void>(() => undefined)
+  const appendDigitRef = useRef<(digit: string) => void>(() => undefined)
+  const appendDecimalRef = useRef<() => void>(() => undefined)
+  const backspaceDisplayRef = useRef<() => void>(() => undefined)
+  const handleOperatorSelectRef = useRef<(selectedOperator: Operator) => void>(() => undefined)
+  const handleEqualRef = useRef<() => void>(() => undefined)
+  const clearAllRef = useRef<() => void>(() => undefined)
+  const flashVirtualKeyRef = useRef<(key: string) => void>(() => undefined)
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
@@ -482,7 +492,7 @@ function App() {
   }
 
   // Pi ve e gibi hazır sayıları ekrana yerleştirmek için ortak yardımcı.
-  const usePreparedNumber = (value: number, pressedLabel: string) => {
+  const applyPreparedNumber = (value: number, pressedLabel: string) => {
     const formattedValue = formatNumberForDisplay(value)
 
     if (isExpressionInputActive) {
@@ -1005,7 +1015,7 @@ function App() {
       return
     }
 
-    usePreparedNumber(memoryValue, 'MR')
+    applyPreparedNumber(memoryValue, 'MR')
   }
 
   const updateMemoryByDisplay = (direction: 'add' | 'subtract') => {
@@ -1028,11 +1038,11 @@ function App() {
   }
 
   const usePiValue = () => {
-    usePreparedNumber(Math.PI, 'π')
+    applyPreparedNumber(Math.PI, 'π')
   }
 
   const useEulerValue = () => {
-    usePreparedNumber(Math.E, 'e')
+    applyPreparedNumber(Math.E, 'e')
   }
 
   const toggleThemeMode = () => {
@@ -1114,6 +1124,19 @@ function App() {
           ? 'Seçili işlem oran bekliyor.'
           : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
 
+  useEffect(() => {
+    isExpressionInputActiveRef.current = isExpressionInputActive
+    isShortcutHelpOpenRef.current = isShortcutHelpOpen
+    appendExpressionTokenRef.current = appendExpressionToken
+    appendDigitRef.current = appendDigit
+    appendDecimalRef.current = appendDecimal
+    backspaceDisplayRef.current = backspaceDisplay
+    handleOperatorSelectRef.current = handleOperatorSelect
+    handleEqualRef.current = handleEqual
+    clearAllRef.current = clearAll
+    flashVirtualKeyRef.current = flashVirtualKey
+  })
+
   // Component kapanırken bekleyen timeout'u temizliyoruz.
   useEffect(() => {
     return () => {
@@ -1171,7 +1194,7 @@ function App() {
         return
       }
 
-      if (isShortcutHelpOpen) {
+      if (isShortcutHelpOpenRef.current) {
         if (event.key === 'Escape') {
           event.preventDefault()
           setIsShortcutHelpOpen(false)
@@ -1181,8 +1204,8 @@ function App() {
 
       if (lowerKey === 'c') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        clearAllRef.current()
+        flashVirtualKeyRef.current('clear')
         return
       }
 
@@ -1198,46 +1221,46 @@ function App() {
         event.key === '(' ||
         event.key === ')'
       const shouldWriteExpressionToken =
-        isExpressionInputActive || event.key === '(' || event.key === ')'
+        isExpressionInputActiveRef.current || event.key === '(' || event.key === ')'
 
       if (isExpressionTokenKey && shouldWriteExpressionToken) {
         event.preventDefault()
-        appendExpressionToken(event.key)
-        flashVirtualKey(event.key === ',' ? '.' : event.key)
+        appendExpressionTokenRef.current(event.key)
+        flashVirtualKeyRef.current(event.key === ',' ? '.' : event.key)
         return
       }
 
       if (/^[0-9]$/.test(event.key)) {
         event.preventDefault()
-        appendDigit(event.key)
-        flashVirtualKey(event.key)
+        appendDigitRef.current(event.key)
+        flashVirtualKeyRef.current(event.key)
         return
       }
 
       if (event.key === '.' || event.key === ',') {
         event.preventDefault()
-        appendDecimal()
-        flashVirtualKey('.')
+        appendDecimalRef.current()
+        flashVirtualKeyRef.current('.')
         return
       }
 
       if (event.key === 'Backspace') {
         event.preventDefault()
-        backspaceDisplay()
+        backspaceDisplayRef.current()
         return
       }
 
       if (event.key === 'Enter' || event.key === '=') {
         event.preventDefault()
-        handleEqual()
-        flashVirtualKey('=')
+        handleEqualRef.current()
+        flashVirtualKeyRef.current('=')
         return
       }
 
       if (event.key === 'Escape') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        clearAllRef.current()
+        flashVirtualKeyRef.current('clear')
         return
       }
 
@@ -1252,95 +1275,85 @@ function App() {
 
       if (operatorMap[event.key]) {
         event.preventDefault()
-        handleOperatorSelect(operatorMap[event.key])
-        flashVirtualKey(operatorMap[event.key])
+        handleOperatorSelectRef.current(operatorMap[event.key])
+        flashVirtualKeyRef.current(operatorMap[event.key])
         return
       }
 
       if (lowerKey === 'l') {
         event.preventDefault()
-        handleOperatorSelect('ln')
-        flashVirtualKey('ln')
+        handleOperatorSelectRef.current('ln')
+        flashVirtualKeyRef.current('ln')
         return
       }
 
       if (lowerKey === 'e') {
         event.preventDefault()
-        handleOperatorSelect('e^x')
-        flashVirtualKey('e^x')
+        handleOperatorSelectRef.current('e^x')
+        flashVirtualKeyRef.current('e^x')
         return
       }
 
       if (lowerKey === 'g') {
         event.preventDefault()
-        handleOperatorSelect('log')
-        flashVirtualKey('log')
+        handleOperatorSelectRef.current('log')
+        flashVirtualKeyRef.current('log')
         return
       }
 
       if (lowerKey === 'r') {
         event.preventDefault()
-        handleOperatorSelect('√')
-        flashVirtualKey('√')
+        handleOperatorSelectRef.current('√')
+        flashVirtualKeyRef.current('√')
         return
       }
 
       if (lowerKey === 'p') {
         event.preventDefault()
-        handleOperatorSelect('‰')
-        flashVirtualKey('‰')
+        handleOperatorSelectRef.current('‰')
+        flashVirtualKeyRef.current('‰')
         return
       }
 
       if (lowerKey === 'm') {
         event.preventDefault()
-        handleOperatorSelect('mod')
-        flashVirtualKey('mod')
+        handleOperatorSelectRef.current('mod')
+        flashVirtualKeyRef.current('mod')
         return
       }
 
       if (lowerKey === 's') {
         event.preventDefault()
-        handleOperatorSelect('x²')
-        flashVirtualKey('x²')
+        handleOperatorSelectRef.current('x²')
+        flashVirtualKeyRef.current('x²')
         return
       }
 
       if (lowerKey === 'i') {
         event.preventDefault()
-        handleOperatorSelect('1/x')
-        flashVirtualKey('1/x')
+        handleOperatorSelectRef.current('1/x')
+        flashVirtualKeyRef.current('1/x')
         return
       }
 
       if (lowerKey === 'a') {
         event.preventDefault()
-        handleOperatorSelect('|x|')
-        flashVirtualKey('|x|')
+        handleOperatorSelectRef.current('|x|')
+        flashVirtualKeyRef.current('|x|')
         return
       }
 
       if (lowerKey === 'f') {
         event.preventDefault()
-        handleOperatorSelect('x!')
-        flashVirtualKey('x!')
+        handleOperatorSelectRef.current('x!')
+        flashVirtualKeyRef.current('x!')
         return
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    appendDecimal,
-    appendDigit,
-    appendExpressionToken,
-    backspaceDisplay,
-    clearAll,
-    handleEqual,
-    handleOperatorSelect,
-    isExpressionInputActive,
-    isShortcutHelpOpen,
-  ])
+  }, [])
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
