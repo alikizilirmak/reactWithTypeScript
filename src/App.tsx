@@ -196,8 +196,25 @@ const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvalu
     }
   }
 
-  const normalizedTokens: string[] = []
+  // Örtük çarpımı destekliyoruz: 5(2), (2)(3), (2)3 gibi.
+  // Böylece kullanıcı "*" yazmadan da matematiksel ifade girebilir.
+  const tokensWithImplicitMultiplication: string[] = []
   for (const token of tokens) {
+    const previousToken = tokensWithImplicitMultiplication[tokensWithImplicitMultiplication.length - 1]
+    const previousTokenIsValue =
+      previousToken !== undefined &&
+      (!Number.isNaN(Number(previousToken)) || previousToken === ')')
+    const tokenStartsValue = token === '(' || !Number.isNaN(Number(token))
+
+    if (previousTokenIsValue && tokenStartsValue) {
+      tokensWithImplicitMultiplication.push('*')
+    }
+
+    tokensWithImplicitMultiplication.push(token)
+  }
+
+  const normalizedTokens: string[] = []
+  for (const token of tokensWithImplicitMultiplication) {
     const previousToken = normalizedTokens[normalizedTokens.length - 1]
     const canBeUnary = !previousToken || ['+', '-', '*', '/', '^', '(', 'u+', 'u-'].includes(previousToken)
 
