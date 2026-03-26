@@ -954,8 +954,10 @@ function App() {
 
   const enterQuadraticModeWithToken = (token: string) => {
     const normalizedToken = token === '^2' ? '²' : token
-    const canReuseCurrentDisplay = isQuadraticModeActive && displayValue !== '0'
-    const nextValue = `${canReuseCurrentDisplay ? displayValue : ''}${normalizedToken}`
+    const canAppendToCurrentDisplay =
+      displayValue !== '0' &&
+      (isQuadraticModeActive || parseNumberInput(displayValue) !== null || isExpressionInputActive)
+    const nextValue = `${canAppendToCurrentDisplay ? displayValue : ''}${normalizedToken}`
 
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
@@ -1900,14 +1902,6 @@ function App() {
               aria-label="Son karakteri sil"
             >
               ⌫
-            </button>
-            <button
-              type="button"
-              className={`secondary ${activeVirtualKey === 'solve-equation' ? 'key-pressed' : ''}`}
-              onClick={solveQuadraticEquationFromDisplay}
-              aria-label="İkinci derece denklemi çöz"
-            >
-              Denklem Çöz
             </button>
           </div>
 
