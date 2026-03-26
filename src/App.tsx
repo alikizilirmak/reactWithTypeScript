@@ -433,6 +433,7 @@ function App() {
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
+  const [isCopied, setIsCopied] = useState<boolean>(false)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
   const keyFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1008,6 +1009,20 @@ function App() {
     setIsExpressionInputActive(false)
   }
 
+  const copyDisplayValue = () => {
+    const textToCopy = displayValue.trim()
+    if (!textToCopy || textToCopy === '0') {
+      return
+    }
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 1200)
+    }).catch(() => {
+      // Clipboard API kullanılamazsa sessizce devam et.
+    })
+  }
+
   // Hafıza (memory) tuşları:
   // - MC: hafızayı temizler
   // - MR: hafızadaki değeri ekrana geri getirir
@@ -1334,7 +1349,7 @@ function App() {
         </div>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
-          binde, kare, ters, mutlak değer, faktöriyel ve mod
+          binde, kare, ters, mutlak değer, faktöriyel, mod, sin, cos ve tan
         </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
@@ -1527,6 +1542,22 @@ function App() {
             >
               C
             </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={backspaceDisplay}
+              aria-label="Son karakteri sil"
+            >
+              ⌫
+            </button>
+            <button
+              type="button"
+              className="secondary copy-button"
+              onClick={copyDisplayValue}
+              aria-label="Sonucu kopyala"
+            >
+              {isCopied ? '✓' : 'Kopyala'}
+            </button>
           </div>
 
         </div>
@@ -1671,6 +1702,12 @@ function App() {
               </li>
               <li>
                 <kbd>F</kbd> : Faktöriyel (<code>x!</code>)
+              </li>
+              <li className="shortcut-section">
+                <strong>Trigonometri (radyan):</strong>
+              </li>
+              <li>
+                <kbd>sin</kbd> / <kbd>cos</kbd> / <kbd>tan</kbd> : Ekran üzerinden
               </li>
               <li className="shortcut-section">
                 <strong>Yardımcı tuşlar (ekran üzerinden):</strong>
