@@ -1132,7 +1132,12 @@ function App() {
         return
       }
 
-      setDisplayValue('Denklem modunda +, -, *, / ve ^ kullanılabilir.')
+      if (selectedOperator === 'x²') {
+        enterQuadraticModeWithToken('a²')
+        return
+      }
+
+      setDisplayValue('Denklem modunda +, -, *, /, ^ ve x² kullanılabilir.')
       return
     }
 
@@ -1204,11 +1209,6 @@ function App() {
   // "=" butonu: bekleyen işlemi çalıştırır.
   const handleEqual = () => {
     setLastPressedValue('=')
-
-    if (isQuadraticModeActive || displayValue.includes('a')) {
-      solveQuadraticEquationFromDisplay()
-      return
-    }
 
     const shouldEvaluateExpression =
       isExpressionInputActive || displayValue.includes('(') || displayValue.includes(')')
@@ -1532,9 +1532,16 @@ function App() {
         return
       }
 
-      if (event.key === 'Enter' || event.key === '=') {
+      if (event.key === 'Enter') {
         event.preventDefault()
         context.handleEqual()
+        context.flashVirtualKey('solve-equation')
+        return
+      }
+
+      if (event.key === '=') {
+        event.preventDefault()
+        context.enterQuadraticModeWithToken('=')
         context.flashVirtualKey('=')
         return
       }
@@ -2076,7 +2083,10 @@ function App() {
                 <kbd>Delete</kbd> : C butonu gibi temizler
               </li>
               <li>
-                <kbd>Enter</kbd> / <kbd>=</kbd> : Hesapla
+                <kbd>Enter</kbd> : Hesapla
+              </li>
+              <li>
+                <kbd>=</kbd> : Denklemde eşittir işareti ekler
               </li>
               <li>
                 <kbd>Escape</kbd> : Temizle (rehber açıksa önce rehberi kapatır)
