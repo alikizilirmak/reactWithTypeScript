@@ -959,7 +959,10 @@ function App() {
     const parsedCurrentValue = parseNumberInput(numericDisplayCandidate)
     const canReuseCurrentDisplay =
       isExpressionInputActive || (parsedCurrentValue !== null && displayValue !== '0')
-    const nextValue = `${canReuseCurrentDisplay ? displayValue : ''}${normalizedToken}`
+    const baseValue = canReuseCurrentDisplay ? displayValue : ''
+    const needsImplicitMultiplication =
+      normalizedToken === '(' && /[\d.)]$/.test(baseValue)
+    const nextValue = `${baseValue}${needsImplicitMultiplication ? '*' : ''}${normalizedToken}`
 
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
