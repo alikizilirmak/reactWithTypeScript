@@ -430,6 +430,18 @@ function App() {
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
   const keyFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const keyboardContextRef = useRef<{
+    appendDecimal: () => void
+    appendDigit: (digit: string) => void
+    appendExpressionToken: (token: string) => void
+    backspaceDisplay: () => void
+    clearAll: () => void
+    flashVirtualKey: (key: string) => void
+    handleEqual: () => void
+    handleOperatorSelect: (operator: Operator) => void
+    isExpressionInputActive: boolean
+    isShortcutHelpOpen: boolean
+  } | null>(null)
 
   // Kullanıcının yaptığı son işlemleri burada tutuyoruz.
   // En güncel işlem en üstte olacak.
@@ -1123,8 +1135,26 @@ function App() {
   // - Escape     => temizle (yardım penceresi açıksa önce onu kapatır)
   // - H / ?      => mini klavye kısayol rehberini aç/kapat
   // Not: Ctrl/Meta/Alt kombinasyonlarını özellikle yakalamıyoruz.
+  keyboardContextRef.current = {
+    appendDecimal,
+    appendDigit,
+    appendExpressionToken,
+    backspaceDisplay,
+    clearAll,
+    flashVirtualKey,
+    handleEqual,
+    handleOperatorSelect,
+    isExpressionInputActive,
+    isShortcutHelpOpen,
+  }
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const context = keyboardContextRef.current
+      if (!context) {
+        return
+      }
+
       if (event.ctrlKey || event.metaKey || event.altKey) {
         return
       }
@@ -1148,7 +1178,7 @@ function App() {
         return
       }
 
-      if (isShortcutHelpOpen) {
+      if (context.isShortcutHelpOpen) {
         if (event.key === 'Escape') {
           event.preventDefault()
           setIsShortcutHelpOpen(false)
@@ -1158,8 +1188,8 @@ function App() {
 
       if (lowerKey === 'c') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        context.clearAll()
+        context.flashVirtualKey('clear')
         return
       }
 
@@ -1175,54 +1205,54 @@ function App() {
         event.key === '(' ||
         event.key === ')'
       const shouldWriteExpressionToken =
-        isExpressionInputActive || event.key === '(' || event.key === ')'
+        context.isExpressionInputActive || event.key === '(' || event.key === ')'
 
       if (isExpressionTokenKey && shouldWriteExpressionToken) {
         event.preventDefault()
-        appendExpressionToken(event.key)
-        flashVirtualKey(event.key === ',' ? '.' : event.key)
+        context.appendExpressionToken(event.key)
+        context.flashVirtualKey(event.key === ',' ? '.' : event.key)
         return
       }
 
       if (/^[0-9]$/.test(event.key)) {
         event.preventDefault()
-        appendDigit(event.key)
-        flashVirtualKey(event.key)
+        context.appendDigit(event.key)
+        context.flashVirtualKey(event.key)
         return
       }
 
       if (event.key === '.' || event.key === ',') {
         event.preventDefault()
-        appendDecimal()
-        flashVirtualKey('.')
+        context.appendDecimal()
+        context.flashVirtualKey('.')
         return
       }
 
       if (event.key === 'Backspace') {
         event.preventDefault()
-        backspaceDisplay()
-        flashVirtualKey('backspace')
+        context.backspaceDisplay()
+        context.flashVirtualKey('backspace')
         return
       }
 
       if (event.key === 'Enter' || event.key === '=') {
         event.preventDefault()
-        handleEqual()
-        flashVirtualKey('=')
+        context.handleEqual()
+        context.flashVirtualKey('=')
         return
       }
 
       if (event.key === 'Escape') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        context.clearAll()
+        context.flashVirtualKey('clear')
         return
       }
 
       if (event.key === 'Delete') {
         event.preventDefault()
-        clearAll()
-        flashVirtualKey('clear')
+        context.clearAll()
+        context.flashVirtualKey('clear')
         return
       }
 
@@ -1237,95 +1267,85 @@ function App() {
 
       if (operatorMap[event.key]) {
         event.preventDefault()
-        handleOperatorSelect(operatorMap[event.key])
-        flashVirtualKey(operatorMap[event.key])
+        context.handleOperatorSelect(operatorMap[event.key])
+        context.flashVirtualKey(operatorMap[event.key])
         return
       }
 
       if (lowerKey === 'l') {
         event.preventDefault()
-        handleOperatorSelect('ln')
-        flashVirtualKey('ln')
+        context.handleOperatorSelect('ln')
+        context.flashVirtualKey('ln')
         return
       }
 
       if (lowerKey === 'e') {
         event.preventDefault()
-        handleOperatorSelect('e^x')
-        flashVirtualKey('e^x')
+        context.handleOperatorSelect('e^x')
+        context.flashVirtualKey('e^x')
         return
       }
 
       if (lowerKey === 'g') {
         event.preventDefault()
-        handleOperatorSelect('log')
-        flashVirtualKey('log')
+        context.handleOperatorSelect('log')
+        context.flashVirtualKey('log')
         return
       }
 
       if (lowerKey === 'r') {
         event.preventDefault()
-        handleOperatorSelect('√')
-        flashVirtualKey('√')
+        context.handleOperatorSelect('√')
+        context.flashVirtualKey('√')
         return
       }
 
       if (lowerKey === 'p') {
         event.preventDefault()
-        handleOperatorSelect('‰')
-        flashVirtualKey('‰')
+        context.handleOperatorSelect('‰')
+        context.flashVirtualKey('‰')
         return
       }
 
       if (lowerKey === 'm') {
         event.preventDefault()
-        handleOperatorSelect('mod')
-        flashVirtualKey('mod')
+        context.handleOperatorSelect('mod')
+        context.flashVirtualKey('mod')
         return
       }
 
       if (lowerKey === 's') {
         event.preventDefault()
-        handleOperatorSelect('x²')
-        flashVirtualKey('x²')
+        context.handleOperatorSelect('x²')
+        context.flashVirtualKey('x²')
         return
       }
 
       if (lowerKey === 'i') {
         event.preventDefault()
-        handleOperatorSelect('1/x')
-        flashVirtualKey('1/x')
+        context.handleOperatorSelect('1/x')
+        context.flashVirtualKey('1/x')
         return
       }
 
       if (lowerKey === 'a') {
         event.preventDefault()
-        handleOperatorSelect('|x|')
-        flashVirtualKey('|x|')
+        context.handleOperatorSelect('|x|')
+        context.flashVirtualKey('|x|')
         return
       }
 
       if (lowerKey === 'f') {
         event.preventDefault()
-        handleOperatorSelect('x!')
-        flashVirtualKey('x!')
+        context.handleOperatorSelect('x!')
+        context.flashVirtualKey('x!')
         return
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    appendDecimal,
-    appendDigit,
-    appendExpressionToken,
-    backspaceDisplay,
-    clearAll,
-    handleEqual,
-    handleOperatorSelect,
-    isExpressionInputActive,
-    isShortcutHelpOpen,
-  ])
+  }, [])
 
   return (
     // Layout'u iki kolona ayırıyoruz: solda hesap makinesi, sağda işlem geçmişi.
