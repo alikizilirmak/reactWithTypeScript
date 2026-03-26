@@ -14,7 +14,7 @@ import {
 type HistoryItem = {
   firstValue: string
   secondValue: string
-  operator: Operator | 'expr'
+  operator: Operator | 'expr' | 'eq2'
   result: string
   expression: string
   isError: boolean
@@ -46,6 +46,7 @@ const VALID_OPERATORS: ReadonlySet<Operator> = new Set([
 const VALID_HISTORY_OPERATORS: ReadonlySet<HistoryItem['operator']> = new Set([
   ...VALID_OPERATORS,
   'expr',
+  'eq2',
 ])
 const UNARY_OPERATORS: ReadonlySet<Operator> = new Set([
   'ln',
@@ -410,6 +411,23 @@ type CalculationJob = {
 }
 
 type HistoryFilter = 'all' | 'success' | 'error' | 'expression'
+type EquationCoefficients = {
+  a: string
+  b: string
+  c: string
+  d: string
+  e: string
+  f: string
+}
+
+const INITIAL_EQUATION_COEFFICIENTS: EquationCoefficients = {
+  a: '',
+  b: '',
+  c: '',
+  d: '',
+  e: '',
+  f: '',
+}
 
 function App() {
   // React'teki "useState" bir Hook'tur.
@@ -427,6 +445,11 @@ function App() {
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
+  const [equationCoefficients, setEquationCoefficients] = useState<EquationCoefficients>(
+    INITIAL_EQUATION_COEFFICIENTS,
+  )
+  const [equationResultText, setEquationResultText] = useState<string>('')
+  const [isEquationResultError, setIsEquationResultError] = useState<boolean>(false)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
   const keyFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -484,6 +507,14 @@ function App() {
 
     const parsedValue = Number(trimmedValue)
     return Number.isFinite(parsedValue) ? parsedValue : null
+  }
+
+  const parseEquationCoefficient = (rawValue: string): number | null => {
+    const normalizedValue = rawValue.replaceAll(',', '.').trim()
+    if (normalizedValue === '') {
+      return 0
+    }
+    return parseNumberInput(normalizedValue)
   }
 
   // Hesap makinesinde kullanacağımız sayıları "ekran dostu" kısa formata çevirir.
@@ -625,6 +656,32 @@ function App() {
       isError,
       createdAt: Date.now(),
       expression: `${normalizedExpression} = ${resultText}`,
+    }
+
+    setHistory((previousHistory) => {
+      const nextHistory = [historyItem, ...previousHistory]
+      if (nextHistory.length > MAX_HISTORY_ITEMS) {
+        nextHistory.length = MAX_HISTORY_ITEMS
+      }
+
+      return nextHistory
+    })
+  }
+
+  const addEquationToHistory = (
+    firstEquation: string,
+    secondEquation: string,
+    resultText: string,
+    isError: boolean,
+  ) => {
+    const historyItem: HistoryItem = {
+      firstValue: firstEquation,
+      secondValue: secondEquation,
+      operator: 'eq2',
+      result: resultText,
+      isError,
+      createdAt: Date.now(),
+      expression: `${firstEquation}; ${secondEquation} => ${resultText}`,
     }
 
     setHistory((previousHistory) => {
@@ -1047,6 +1104,84 @@ function App() {
     applyPreparedNumber(Math.E, 'e')
   }
 
+  const updateEquationCoefficient = (
+    coefficientKey: keyof EquationCoefficients,
+    nextValue: string,
+  ) => {
+    const normalizedValue = nextValue.replaceAll(',', '.')
+    setEquationCoefficients((previousCoefficients) => ({
+      ...previousCoefficients,
+      [coefficientKey]: normalizedValue,
+    }))
+  }
+
+  const clearEquationSolver = () => {
+    setEquationCoefficients(INITIAL_EQUATION_COEFFICIENTS)
+    setEquationResultText('')
+    setIsEquationResultError(false)
+  }
+
+  const solveTwoVariableEquation = () => {
+    const { a: rawA, b: rawB, c: rawC, d: rawD, e: rawE, f: rawF } = equationCoefficients
+    const firstEquationText = `(${rawA.trim() || '0'})x + (${rawB.trim() || '0'})y = ${
+      rawC.trim() || '0'
+    }`
+    const secondEquationText = `(${rawD.trim() || '0'})x + (${rawE.trim() || '0'})y = ${
+      rawF.trim() || '0'
+    }`
+
+    const a = parseEquationCoefficient(rawA)
+    const b = parseEquationCoefficient(rawB)
+    const c = parseEquationCoefficient(rawC)
+    const d = parseEquationCoefficient(rawD)
+    const e = parseEquationCoefficient(rawE)
+    const f = parseEquationCoefficient(rawF)
+
+    if ([a, b, c, d, e, f].some((value) => value === null)) {
+      const errorText = 'Denklem katsayıları için geçerli sayılar girin.'
+      setEquationResultText(errorText)
+      setIsEquationResultError(true)
+      addEquationToHistory(firstEquationText, secondEquationText, errorText, true)
+      return
+    }
+
+    const determinant = (a as number) * (e as number) - (b as number) * (d as number)
+    const determinantX = (c as number) * (e as number) - (b as number) * (f as number)
+    const determinantY = (a as number) * (f as number) - (c as number) * (d as number)
+    const epsilon = 1e-10
+    const isAlmostZero = (value: number) => Math.abs(value) < epsilon
+    let resultText = ''
+    let isError = false
+
+    if (!isAlmostZero(determinant)) {
+      const x = determinantX / determinant
+      const y = determinantY / determinant
+
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        resultText = 'Denklem sonucu sayı sınırını aşıyor.'
+        isError = true
+      } else {
+        resultText = `x = ${formatNumberForDisplay(x)}, y = ${formatNumberForDisplay(y)}`
+      }
+    } else if (isAlmostZero(determinantX) && isAlmostZero(determinantY)) {
+      resultText = 'Sonsuz çözüm var (denklemler birbirinin katı).'
+    } else {
+      resultText = 'Çözümsüz sistem (denklemler çelişkili).'
+      isError = true
+    }
+
+    setEquationResultText(resultText)
+    setIsEquationResultError(isError)
+    setDisplayValue(resultText)
+    setLastPressedValue('2x2 denklem')
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
+    addEquationToHistory(firstEquationText, secondEquationText, resultText, isError)
+  }
+
   const toggleThemeMode = () => {
     setThemeMode((previousTheme) => (previousTheme === 'light' ? 'dark' : 'light'))
   }
@@ -1084,7 +1219,7 @@ function App() {
     }
 
     if (historyFilter === 'expression') {
-      return item.operator === 'expr'
+      return item.operator === 'expr' || item.operator === 'eq2'
     }
 
     return historyFilter === 'error' ? item.isError : !item.isError
@@ -1418,6 +1553,98 @@ function App() {
           Klavye kısayol rehberi için <kbd>H</kbd> tuşuna basabilirsin.
         </p>
 
+        <section className="equation-solver" aria-label="İki bilinmeyenli denklem çözücü">
+          <div className="equation-solver-head">
+            <h3>İki Bilinmeyenli Denklem Çözücü</h3>
+            <p>ax + by = c ve dx + ey = f biçimindeki sistemleri çözer.</p>
+          </div>
+
+          <div className="equation-form-row">
+            <span className="equation-row-label">1. denklem</span>
+            <div className="equation-inline-fields">
+              <input
+                id="equation-a"
+                type="text"
+                inputMode="decimal"
+                placeholder="a"
+                value={equationCoefficients.a}
+                onChange={(event) => updateEquationCoefficient('a', event.target.value)}
+              />
+              <span>x +</span>
+              <input
+                id="equation-b"
+                type="text"
+                inputMode="decimal"
+                placeholder="b"
+                value={equationCoefficients.b}
+                onChange={(event) => updateEquationCoefficient('b', event.target.value)}
+              />
+              <span>y =</span>
+              <input
+                id="equation-c"
+                type="text"
+                inputMode="decimal"
+                placeholder="c"
+                value={equationCoefficients.c}
+                onChange={(event) => updateEquationCoefficient('c', event.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="equation-form-row">
+            <span className="equation-row-label">2. denklem</span>
+            <div className="equation-inline-fields">
+              <input
+                id="equation-d"
+                type="text"
+                inputMode="decimal"
+                placeholder="d"
+                value={equationCoefficients.d}
+                onChange={(event) => updateEquationCoefficient('d', event.target.value)}
+              />
+              <span>x +</span>
+              <input
+                id="equation-e"
+                type="text"
+                inputMode="decimal"
+                placeholder="e"
+                value={equationCoefficients.e}
+                onChange={(event) => updateEquationCoefficient('e', event.target.value)}
+              />
+              <span>y =</span>
+              <input
+                id="equation-f"
+                type="text"
+                inputMode="decimal"
+                placeholder="f"
+                value={equationCoefficients.f}
+                onChange={(event) => updateEquationCoefficient('f', event.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="equation-actions">
+            <button type="button" className="equation-solve" onClick={solveTwoVariableEquation}>
+              Denklem Çöz
+            </button>
+            <button type="button" className="equation-clear" onClick={clearEquationSolver}>
+              Alanları Temizle
+            </button>
+          </div>
+
+          <p
+            className={`equation-result ${
+              equationResultText === ''
+                ? 'placeholder'
+                : isEquationResultError
+                  ? 'error'
+                  : 'success'
+            }`}
+          >
+            {equationResultText || 'Sonuç burada görünecek.'}
+          </p>
+        </section>
+
         {/* Bilimsel operatör + sabitler sayıların üstünde, hafıza + 4 işlem yan tarafta */}
         <div className="keypad-layout">
           <div className="scientific-and-constants">
@@ -1647,7 +1874,7 @@ function App() {
             className={`history-filter ${historyFilter === 'expression' ? 'active' : ''}`}
             onClick={() => setHistoryFilter('expression')}
           >
-            İfade
+            İfade / Denklem
           </button>
         </div>
 
