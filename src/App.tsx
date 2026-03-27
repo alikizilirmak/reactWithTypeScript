@@ -136,32 +136,27 @@ type ExpressionEvaluationResult = {
   isError: boolean
 }
 
-type QuadraticSolveResult = {
+type PolynomialSolveResult = {
   resultText: string
   isError: boolean
 }
 
-type QuadraticCoefficients = {
-  a: number
-  b: number
-  c: number
-}
-
-type QuadraticCoefficientsParseResult =
+type PolynomialCoefficientsParseResult =
   | {
       isError: false
-      coefficientA: number
-      coefficientB: number
-      coefficientC: number
+      coefficients: number[]
+      degree: number
       normalizedExpression: string
+      polynomialText: string
     }
   | {
       isError: true
       errorText: string
     }
 
-type QuadraticParseOptions = {
+type PolynomialParseOptions = {
   allowSingleSidedExpression?: boolean
+  maxDegree?: number
 }
 
 type EquationGraphPoint = {
@@ -182,23 +177,24 @@ type EquationGraphData = {
 const formatCompactNumber = (value: number): string =>
   Number.parseFloat(value.toPrecision(12)).toString()
 
-const formatQuadraticPolynomial = (
-  coefficientA: number,
-  coefficientB: number,
-  coefficientC: number,
+const formatPolynomialFromCoefficients = (
+  coefficients: number[],
+  degree: number,
   variableSymbol = 'a',
 ): string => {
   const terms: string[] = []
+  const epsilon = 1e-10
 
-  const addTerm = (coefficient: number, suffix: string) => {
-    if (Math.abs(coefficient) < 1e-10) {
+  const addTerm = (coefficient: number, power: number) => {
+    if (Math.abs(coefficient) < epsilon) {
       return
     }
 
     const absCoefficient = Math.abs(coefficient)
-    const hasSuffix = suffix !== ''
+    const suffix = power === 0 ? '' : power === 1 ? variableSymbol : `${variableSymbol}^${power}`
+    const hasSuffix = power > 0
     const coefficientText =
-      hasSuffix && Math.abs(absCoefficient - 1) < 1e-10 ? '' : formatCompactNumber(absCoefficient)
+      hasSuffix && Math.abs(absCoefficient - 1) < epsilon ? '' : formatCompactNumber(absCoefficient)
     const termText = `${coefficientText}${suffix}`
 
     if (terms.length === 0) {
@@ -209,113 +205,176 @@ const formatQuadraticPolynomial = (
     terms.push(`${coefficient < 0 ? '-' : '+'} ${termText}`)
   }
 
-  addTerm(coefficientA, `${variableSymbol}²`)
-  addTerm(coefficientB, variableSymbol)
-  addTerm(coefficientC, '')
+  for (let index = 0; index < coefficients.length; index += 1) {
+    const power = degree - index
+    addTerm(coefficients[index] ?? 0, power)
+  }
 
   return terms.length > 0 ? terms.join(' ') : '0'
 }
 
-const parseQuadraticCoefficients = (
+const SUPERSCRIPT_TO_DIGIT_MAP: Record<string, string> = {
+  '⁰': '0',
+  '¹': '1',
+  '²': '2',
+  '³': '3',
+  '⁴': '4',
+  '⁵': '5',
+  '⁶': '6',
+  '⁷': '7',
+  '⁸': '8',
+  '⁹': '9',
+}
+
+const normalizeExpressionForPolynomial = (rawExpression: string, variableSymbol: string): string => {
+  const normalizedVariable = variableSymbol.toLowerCase()
+  return rawExpression
+    .replaceAll(',', '.')
+    .replace(/\s+/g, '')
+    .replaceAll(normalizedVariable.toUpperCase(), normalizedVariable)
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (match) => {
+      const digits = [...match].map((char) => SUPERSCRIPT_TO_DIGIT_MAP[char] ?? '')
+      return `^${digits.join('')}`
+    })
+}
+
+const evaluatePolynomialValue = (coefficients: number[], value: number): number =>
+  coefficients.reduce((accumulator, coefficient) => accumulator * value + coefficient, 0)
+
+const parsePolynomialCoefficients = (
   rawExpression: string,
   variableSymbol = 'a',
-  options: QuadraticParseOptions = {},
-): QuadraticCoefficientsParseResult => {
-  const { allowSingleSidedExpression = false } = options
-  const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
-  if (!expression) {
+  options: PolynomialParseOptions = {},
+): PolynomialCoefficientsParseResult => {
+  const { allowSingleSidedExpression = false, maxDegree = 12 } = options
+  const normalizedExpression = normalizeExpressionForPolynomial(rawExpression, variableSymbol)
+
+  if (!normalizedExpression) {
     return {
       isError: true,
       errorText: `Lütfen ${variableSymbol} içeren bir denklem girin.`,
     }
   }
 
-  const normalizedExpression = expression
-    .replaceAll(variableSymbol.toUpperCase(), variableSymbol)
-    .replace(/\^2/g, '²')
   const expressionParts = normalizedExpression.split('=')
+  const epsilon = 1e-10
 
-  const normalizeTerms = (sideExpression: string): string[] => {
+  const parseSide = (sideExpression: string): Map<number, number> | null => {
+    if (sideExpression === '') {
+      return null
+    }
+
     const withLeadingSign = /^[+-]/.test(sideExpression) ? sideExpression : `+${sideExpression}`
-    return withLeadingSign.match(/[+-][^+-]+/g) ?? []
-  }
-
-  const parseSide = (sideExpression: string): QuadraticCoefficients | null => {
-    const terms = normalizeTerms(sideExpression)
+    const terms = withLeadingSign.match(/[+-][^+-]+/g) ?? []
     if (terms.length === 0) {
       return null
     }
 
-    let coefficientA = 0
-    let coefficientB = 0
-    let coefficientC = 0
+    const coefficientsByPower = new Map<number, number>()
+    const escapedVariable = variableSymbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const variableTermPattern = new RegExp(
+      `^([+-])(?:(\\d+(?:\\.\\d*)?|\\.\\d+)\\*?)?${escapedVariable}(?:\\^(\\d+))?$`,
+    )
+    const constantPattern = /^([+-])(\d+(?:\.\d*)?|\.\d+)$/
 
     for (const term of terms) {
-      if (term.includes(`${variableSymbol}²`)) {
-        const rawCoefficient = term.replace(`${variableSymbol}²`, '').replace('²', '')
-        const parsedCoefficient =
-          rawCoefficient === '+' || rawCoefficient === ''
-            ? 1
-            : rawCoefficient === '-'
-              ? -1
-              : Number(rawCoefficient)
-
-        if (!Number.isFinite(parsedCoefficient)) {
-          return null
-        }
-
-        coefficientA += parsedCoefficient
-        continue
-      }
-
       if (term.includes(variableSymbol)) {
-        const rawCoefficient = term.replace(variableSymbol, '')
-        const parsedCoefficient =
-          rawCoefficient === '+' || rawCoefficient === ''
-            ? 1
-            : rawCoefficient === '-'
-              ? -1
-              : Number(rawCoefficient)
-
-        if (!Number.isFinite(parsedCoefficient)) {
+        const match = term.match(variableTermPattern)
+        if (!match) {
           return null
         }
 
-        coefficientB += parsedCoefficient
+        const sign = match[1] === '-' ? -1 : 1
+        const rawCoefficient = match[2]
+        const rawPower = match[3]
+        const coefficientMagnitude =
+          rawCoefficient === undefined || rawCoefficient === '' ? 1 : Number(rawCoefficient)
+        const parsedPower = rawPower === undefined ? 1 : Number(rawPower)
+
+        if (
+          !Number.isFinite(coefficientMagnitude) ||
+          !Number.isInteger(parsedPower) ||
+          parsedPower < 0 ||
+          parsedPower > maxDegree
+        ) {
+          return null
+        }
+
+        const parsedCoefficient = sign * coefficientMagnitude
+        const previousCoefficient = coefficientsByPower.get(parsedPower) ?? 0
+        coefficientsByPower.set(parsedPower, previousCoefficient + parsedCoefficient)
         continue
       }
 
-      const parsedConstant = Number(term)
-      if (!Number.isFinite(parsedConstant)) {
+      const constantMatch = term.match(constantPattern)
+      if (!constantMatch) {
         return null
       }
 
-      coefficientC += parsedConstant
+      const sign = constantMatch[1] === '-' ? -1 : 1
+      const parsedConstant = Number(constantMatch[2])
+      if (!Number.isFinite(parsedConstant)) {
+        return null
+      }
+      const previousConstant = coefficientsByPower.get(0) ?? 0
+      coefficientsByPower.set(0, previousConstant + sign * parsedConstant)
     }
 
+    return coefficientsByPower
+  }
+
+  const toResult = (coefficientsByPower: Map<number, number>): PolynomialCoefficientsParseResult => {
+    const normalizedEntries = [...coefficientsByPower.entries()]
+      .map(([power, coefficient]) => [power, Math.abs(coefficient) < epsilon ? 0 : coefficient] as const)
+      .filter(([, coefficient]) => coefficient !== 0)
+
+    if (normalizedEntries.length === 0) {
+      return {
+        isError: false,
+        coefficients: [0],
+        degree: 0,
+        normalizedExpression,
+        polynomialText: '0',
+      }
+    }
+
+    const maxPower = Math.max(...normalizedEntries.map(([power]) => power))
+    if (!Number.isFinite(maxPower) || maxPower > maxDegree) {
+      return {
+        isError: true,
+        errorText: `Maksimum ${maxDegree}. dereceye kadar destekleniyor.`,
+      }
+    }
+
+    const coefficients = Array.from({ length: maxPower + 1 }, () => 0)
+    for (const [power, coefficient] of normalizedEntries) {
+      coefficients[maxPower - power] = coefficient
+    }
+
+    while (coefficients.length > 1 && Math.abs(coefficients[0] ?? 0) < epsilon) {
+      coefficients.shift()
+    }
+
+    const degree = coefficients.length - 1
     return {
-      a: coefficientA,
-      b: coefficientB,
-      c: coefficientC,
+      isError: false,
+      coefficients,
+      degree,
+      normalizedExpression,
+      polynomialText: formatPolynomialFromCoefficients(coefficients, degree, variableSymbol),
     }
   }
 
   if (expressionParts.length === 1 && allowSingleSidedExpression) {
-    const singleSideCoefficients = parseSide(expressionParts[0] ?? '')
-    if (!singleSideCoefficients) {
+    const singleSideMap = parseSide(expressionParts[0] ?? '')
+    if (!singleSideMap) {
       return {
         isError: true,
-        errorText: `Fonksiyon formatı geçersiz. Örn: 5${variableSymbol}²+3${variableSymbol}+8`,
+        errorText: `Fonksiyon formatı geçersiz. Örn: 2${variableSymbol}^3-5${variableSymbol}+1`,
       }
     }
 
-    return {
-      isError: false,
-      coefficientA: singleSideCoefficients.a,
-      coefficientB: singleSideCoefficients.b,
-      coefficientC: singleSideCoefficients.c,
-      normalizedExpression,
-    }
+    return toResult(singleSideMap)
   }
 
   if (expressionParts.length !== 2) {
@@ -338,37 +397,36 @@ const parseQuadraticCoefficients = (
   if (!leftCoefficients || !rightCoefficients) {
     return {
       isError: true,
-      errorText: `Denklem formatı geçersiz. Örn: 5${variableSymbol}²+3${variableSymbol}=8`,
+      errorText: `Denklem formatı geçersiz. Örn: 2${variableSymbol}^3-5${variableSymbol}=7`,
     }
   }
 
-  return {
-    isError: false,
-    coefficientA: leftCoefficients.a - rightCoefficients.a,
-    coefficientB: leftCoefficients.b - rightCoefficients.b,
-    coefficientC: leftCoefficients.c - rightCoefficients.c,
-    normalizedExpression,
+  const resultMap = new Map<number, number>(leftCoefficients)
+  for (const [power, coefficient] of rightCoefficients.entries()) {
+    resultMap.set(power, (resultMap.get(power) ?? 0) - coefficient)
   }
+  return toResult(resultMap)
 }
 
-const buildQuadraticGraphData = (rawExpression: string, variableSymbol = 'a') => {
-  const parseResult = parseQuadraticCoefficients(rawExpression, variableSymbol, {
+const buildPolynomialGraphData = (rawExpression: string, variableSymbol = 'a') => {
+  const parseResult = parsePolynomialCoefficients(rawExpression, variableSymbol, {
     allowSingleSidedExpression: true,
+    maxDegree: 12,
   })
   if (parseResult.isError) {
     return parseResult
   }
 
-  const { coefficientA, coefficientB, coefficientC, normalizedExpression } = parseResult
+  const { coefficients, normalizedExpression, polynomialText } = parseResult
   const xMin = -10
   const xMax = 10
-  const sampleCount = 241
+  const sampleCount = 401
   const points: EquationGraphPoint[] = []
 
   for (let index = 0; index < sampleCount; index += 1) {
     const ratio = index / (sampleCount - 1)
     const x = xMin + (xMax - xMin) * ratio
-    const y = coefficientA * x ** 2 + coefficientB * x + coefficientC
+    const y = evaluatePolynomialValue(coefficients, x)
 
     if (!Number.isFinite(y)) {
       continue
@@ -397,12 +455,7 @@ const buildQuadraticGraphData = (rawExpression: string, variableSymbol = 'a') =>
     isError: false as const,
     data: {
       expression: normalizedExpression,
-      polynomialText: formatQuadraticPolynomial(
-        coefficientA,
-        coefficientB,
-        coefficientC,
-        variableSymbol,
-      ),
+      polynomialText,
       points,
       xMin,
       xMax,
@@ -411,6 +464,187 @@ const buildQuadraticGraphData = (rawExpression: string, variableSymbol = 'a') =>
     },
   }
 }
+
+type ComplexNumber = {
+  re: number
+  im: number
+}
+
+const addComplex = (left: ComplexNumber, right: ComplexNumber): ComplexNumber => ({
+  re: left.re + right.re,
+  im: left.im + right.im,
+})
+
+const subtractComplex = (left: ComplexNumber, right: ComplexNumber): ComplexNumber => ({
+  re: left.re - right.re,
+  im: left.im - right.im,
+})
+
+const multiplyComplex = (left: ComplexNumber, right: ComplexNumber): ComplexNumber => ({
+  re: left.re * right.re - left.im * right.im,
+  im: left.re * right.im + left.im * right.re,
+})
+
+const divideComplex = (left: ComplexNumber, right: ComplexNumber): ComplexNumber | null => {
+  const denominator = right.re ** 2 + right.im ** 2
+  if (denominator < 1e-16) {
+    return null
+  }
+
+  return {
+    re: (left.re * right.re + left.im * right.im) / denominator,
+    im: (left.im * right.re - left.re * right.im) / denominator,
+  }
+}
+
+const complexAbs = (value: ComplexNumber): number => Math.hypot(value.re, value.im)
+
+const evaluatePolynomialComplex = (
+  coefficients: number[],
+  value: ComplexNumber,
+): ComplexNumber => {
+  let accumulator: ComplexNumber = {
+    re: coefficients[0] ?? 0,
+    im: 0,
+  }
+
+  for (let index = 1; index < coefficients.length; index += 1) {
+    accumulator = addComplex(multiplyComplex(accumulator, value), {
+      re: coefficients[index] ?? 0,
+      im: 0,
+    })
+  }
+
+  return accumulator
+}
+
+const findRealPolynomialRoots = (coefficients: number[]): number[] | null => {
+  const degree = coefficients.length - 1
+  if (degree < 1) {
+    return []
+  }
+
+  const leadingCoefficient = coefficients[0]
+  if (leadingCoefficient === undefined || Math.abs(leadingCoefficient) < 1e-12) {
+    return null
+  }
+
+  const normalizedCoefficients = coefficients.map((coefficient) => coefficient / leadingCoefficient)
+  const radius =
+    1 + Math.max(...normalizedCoefficients.slice(1).map((coefficient) => Math.abs(coefficient)))
+  let roots: ComplexNumber[] = Array.from({ length: degree }, (_, index) => {
+    const angle = (2 * Math.PI * index) / degree
+    return {
+      re: radius * Math.cos(angle),
+      im: radius * Math.sin(angle),
+    }
+  })
+
+  const maxIterations = 250
+  const convergenceThreshold = 1e-9
+
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    let isConverged = true
+    const nextRoots: ComplexNumber[] = []
+
+    for (let index = 0; index < degree; index += 1) {
+      const root = roots[index] ?? { re: 0, im: 0 }
+      let denominator: ComplexNumber = { re: 1, im: 0 }
+
+      for (let innerIndex = 0; innerIndex < degree; innerIndex += 1) {
+        if (innerIndex === index) {
+          continue
+        }
+
+        const otherRoot = roots[innerIndex] ?? { re: 0, im: 0 }
+        let difference = subtractComplex(root, otherRoot)
+        if (complexAbs(difference) < 1e-12) {
+          difference = {
+            re: difference.re + 1e-6,
+            im: difference.im + 1e-6,
+          }
+        }
+        denominator = multiplyComplex(denominator, difference)
+      }
+
+      const numerator = evaluatePolynomialComplex(normalizedCoefficients, root)
+      const delta = divideComplex(numerator, denominator)
+      if (!delta) {
+        nextRoots.push(root)
+        isConverged = false
+        continue
+      }
+
+      const nextRoot = subtractComplex(root, delta)
+      if (complexAbs(delta) > convergenceThreshold) {
+        isConverged = false
+      }
+      nextRoots.push(nextRoot)
+    }
+
+    roots = nextRoots
+    if (isConverged) {
+      break
+    }
+  }
+
+  const derivativeCoefficients = coefficients
+    .slice(0, -1)
+    .map((coefficient, index) => coefficient * (degree - index))
+
+  const polishedRealRoots = roots
+    .filter((root) => Math.abs(root.im) < 1e-6)
+    .map((root) => {
+      let current = root.re
+      for (let iteration = 0; iteration < 12; iteration += 1) {
+        const value = evaluatePolynomialValue(coefficients, current)
+        const derivativeValue = evaluatePolynomialValue(derivativeCoefficients, current)
+        if (!Number.isFinite(value) || !Number.isFinite(derivativeValue) || Math.abs(derivativeValue) < 1e-10) {
+          break
+        }
+
+        const next = current - value / derivativeValue
+        if (!Number.isFinite(next)) {
+          break
+        }
+
+        if (Math.abs(next - current) < 1e-10) {
+          current = next
+          break
+        }
+        current = next
+      }
+      return current
+    })
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right)
+
+  const uniqueRoots: number[] = []
+  for (const root of polishedRealRoots) {
+    const previousRoot = uniqueRoots[uniqueRoots.length - 1]
+    if (previousRoot === undefined || Math.abs(root - previousRoot) > 1e-5) {
+      uniqueRoots.push(root)
+      continue
+    }
+
+    uniqueRoots[uniqueRoots.length - 1] = (previousRoot + root) / 2
+  }
+
+  const coefficientScale = Math.max(...coefficients.map((coefficient) => Math.abs(coefficient)), 1)
+  const verifiedRoots = uniqueRoots.filter(
+    (root) => Math.abs(evaluatePolynomialValue(coefficients, root)) <= coefficientScale * 1e-5,
+  )
+  return verifiedRoots
+}
+
+const SUBSCRIPT_DIGITS = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉']
+
+const toSubscriptNumber = (value: number): string =>
+  value
+    .toString()
+    .split('')
+    .map((digit) => SUBSCRIPT_DIGITS[Number(digit)] ?? digit)
+    .join('')
 
 const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvaluationResult => {
   const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
@@ -652,11 +886,14 @@ const evaluateParenthesizedExpression = (rawExpression: string): ExpressionEvalu
   }
 }
 
-const evaluateQuadraticExpression = (
+const evaluatePolynomialEquation = (
   rawExpression: string,
   variableSymbol = 'a',
-): QuadraticSolveResult => {
-  const parseResult = parseQuadraticCoefficients(rawExpression, variableSymbol)
+): PolynomialSolveResult => {
+  const parseResult = parsePolynomialCoefficients(rawExpression, variableSymbol, {
+    allowSingleSidedExpression: true,
+    maxDegree: 12,
+  })
   if (parseResult.isError) {
     return {
       resultText: parseResult.errorText,
@@ -664,13 +901,30 @@ const evaluateQuadraticExpression = (
     }
   }
 
-  const { coefficientA, coefficientB, coefficientC } = parseResult
+  const { coefficients, degree } = parseResult
   const epsilon = 1e-10
-  const isAlmostZero = (value: number): boolean => Math.abs(value) < epsilon
+  const isAlmostZero = (value: number): boolean => Math.abs(value) <= epsilon
 
-  if (isAlmostZero(coefficientA)) {
-    if (isAlmostZero(coefficientB)) {
-      if (isAlmostZero(coefficientC)) {
+  if (degree === 0) {
+    const constantTerm = coefficients[0] ?? 0
+    if (isAlmostZero(constantTerm)) {
+      return {
+        resultText: 'Sonsuz çözüm var (özdeş denklem).',
+        isError: false,
+      }
+    }
+
+    return {
+      resultText: 'Çözümsüz denklem.',
+      isError: true,
+    }
+  }
+
+  if (degree === 1) {
+    const coefficientA = coefficients[0] ?? 0
+    const coefficientB = coefficients[1] ?? 0
+    if (isAlmostZero(coefficientA)) {
+      if (isAlmostZero(coefficientB)) {
         return {
           resultText: 'Sonsuz çözüm var (özdeş denklem).',
           isError: false,
@@ -683,7 +937,7 @@ const evaluateQuadraticExpression = (
       }
     }
 
-    const linearRoot = -coefficientC / coefficientB
+    const linearRoot = -coefficientB / coefficientA
     if (!Number.isFinite(linearRoot)) {
       return {
         resultText: 'Denklem sonucu sayı sınırını aşıyor.',
@@ -697,43 +951,36 @@ const evaluateQuadraticExpression = (
     }
   }
 
-  const delta = coefficientB ** 2 - 4 * coefficientA * coefficientC
-  if (delta > epsilon) {
-    const sqrtDelta = Math.sqrt(delta)
-    const root1 = (-coefficientB + sqrtDelta) / (2 * coefficientA)
-    const root2 = (-coefficientB - sqrtDelta) / (2 * coefficientA)
-
-    if (!Number.isFinite(root1) || !Number.isFinite(root2)) {
-      return {
-        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
-        isError: true,
-      }
-    }
-
+  const realRoots = findRealPolynomialRoots(coefficients)
+  if (realRoots === null) {
     return {
-      resultText: `${variableSymbol}₁ = ${formatCompactNumber(root1)}, ${variableSymbol}₂ = ${formatCompactNumber(root2)}`,
-      isError: false,
+      resultText: 'Denklem çözülemedi. Lütfen ifadeyi kontrol edin.',
+      isError: true,
     }
   }
 
-  if (isAlmostZero(delta)) {
-    const repeatedRoot = -coefficientB / (2 * coefficientA)
-    if (!Number.isFinite(repeatedRoot)) {
-      return {
-        resultText: 'Denklem sonucu sayı sınırını aşıyor.',
-        isError: true,
-      }
-    }
-
+  if (realRoots.length === 0) {
     return {
-      resultText: `${variableSymbol} = ${formatCompactNumber(repeatedRoot)}`,
+      resultText: 'Gerçek sayılarda kök yok.',
+      isError: true,
+    }
+  }
+
+  if (realRoots.length === 1) {
+    return {
+      resultText: `${variableSymbol} = ${formatCompactNumber(realRoots[0] ?? 0)}`,
       isError: false,
     }
   }
 
   return {
-    resultText: 'Gerçek sayılarda kök yok (Δ < 0).',
-    isError: true,
+    resultText: realRoots
+      .map(
+        (root, index) =>
+          `${variableSymbol}${toSubscriptNumber(index + 1)} = ${formatCompactNumber(root)}`,
+      )
+      .join(', '),
+    isError: false,
   }
 }
 
@@ -808,7 +1055,7 @@ function App() {
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
-  const [isQuadraticModeActive, setIsQuadraticModeActive] = useState<boolean>(false)
+  const [isPolynomialModeActive, setIsPolynomialModeActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
@@ -822,11 +1069,11 @@ function App() {
     flashVirtualKey: (key: string) => void
     handleEqual: () => void
     handleOperatorSelect: (operator: Operator) => void
-    enterQuadraticModeWithToken: (token: string) => void
-    solveQuadraticEquationFromDisplay: () => void
+    enterPolynomialModeWithToken: (token: string) => void
+    solvePolynomialEquationFromDisplay: () => void
     displayValue: string
     isExpressionInputActive: boolean
-    isQuadraticModeActive: boolean
+    isPolynomialModeActive: boolean
     isShortcutHelpOpen: boolean
   } | null>(null)
 
@@ -1133,7 +1380,7 @@ function App() {
       !isExpressionInputActive &&
       pendingOperator !== null &&
       isWaitingForSecondValue &&
-      !isQuadraticModeActive
+      !isPolynomialModeActive
         ? pendingOperator
         : ''
     const canReuseCurrentDisplay =
@@ -1150,14 +1397,14 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(true)
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
-  const enterQuadraticModeWithToken = (token: string) => {
+  const enterPolynomialModeWithToken = (token: string) => {
     const normalizedToken = token === '^2' ? '²' : token
     const canAppendToCurrentDisplay =
       displayValue !== '0' &&
-      (isQuadraticModeActive || parseNumberInput(displayValue) !== null || isExpressionInputActive)
+      (isPolynomialModeActive || parseNumberInput(displayValue) !== null || isExpressionInputActive)
     const nextValue = `${canAppendToCurrentDisplay ? displayValue : ''}${normalizedToken}`
 
     setDisplayValue(nextValue)
@@ -1167,12 +1414,12 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(false)
-    setIsQuadraticModeActive(true)
+    setIsPolynomialModeActive(true)
   }
 
-  const solveQuadraticEquationFromDisplay = () => {
+  const solvePolynomialEquationFromDisplay = () => {
     const expressionText = displayValue.trim()
-    const { resultText, isError } = evaluateQuadraticExpression(expressionText, 'a')
+    const { resultText, isError } = evaluatePolynomialEquation(expressionText, 'a')
 
     setDisplayValue(resultText)
     setLastPressedValue(expressionText)
@@ -1183,11 +1430,11 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
   const drawEquationGraph = (expressionText: string) => {
-    const graphResult = buildQuadraticGraphData(expressionText.trim(), 'a')
+    const graphResult = buildPolynomialGraphData(expressionText.trim(), 'a')
 
     if (graphResult.isError) {
       setEquationGraphData(null)
@@ -1220,8 +1467,8 @@ function App() {
   // Rakam butonları için giriş fonksiyonu.
   // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
   const appendDigit = (digit: string) => {
-    if (isQuadraticModeActive) {
-      enterQuadraticModeWithToken(digit)
+    if (isPolynomialModeActive) {
+      enterPolynomialModeWithToken(digit)
       return
     }
 
@@ -1235,7 +1482,7 @@ function App() {
       setLastPressedValue(digit)
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
-      setIsQuadraticModeActive(false)
+      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1243,7 +1490,7 @@ function App() {
       setDisplayValue(digit)
       setLastPressedValue(digit)
       setIsExpressionInputActive(false)
-      setIsQuadraticModeActive(false)
+      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1251,13 +1498,13 @@ function App() {
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
     setIsExpressionInputActive(false)
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
   // Ondalık nokta ekleme işlemi.
   const appendDecimal = () => {
-    if (isQuadraticModeActive) {
-      enterQuadraticModeWithToken('.')
+    if (isPolynomialModeActive) {
+      enterPolynomialModeWithToken('.')
       return
     }
 
@@ -1271,7 +1518,7 @@ function App() {
       setLastPressedValue('0.')
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
-      setIsQuadraticModeActive(false)
+      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1280,13 +1527,13 @@ function App() {
       setDisplayValue(nextValue)
       setLastPressedValue(nextValue)
       setIsExpressionInputActive(false)
-      setIsQuadraticModeActive(false)
+      setIsPolynomialModeActive(false)
     }
   }
 
   // Pozitif/negatif işaretini çevirir (±).
   const toggleSign = () => {
-    if (isExpressionInputActive || isQuadraticModeActive) {
+    if (isExpressionInputActive || isPolynomialModeActive) {
       const expression = displayValue.trim()
       if (!expression || expression === '0') {
         return
@@ -1334,12 +1581,12 @@ function App() {
 
   // Backspace davranışı: son girilen karakteri siler.
   const backspaceDisplay = () => {
-    if (isExpressionInputActive || isQuadraticModeActive) {
+    if (isExpressionInputActive || isPolynomialModeActive) {
       if (displayValue.length <= 1) {
         setDisplayValue('0')
         setLastPressedValue('')
         setIsExpressionInputActive(false)
-        setIsQuadraticModeActive(false)
+        setIsPolynomialModeActive(false)
         return
       }
 
@@ -1349,7 +1596,7 @@ function App() {
 
       if (!/[()+\-*/^=]/.test(nextValue)) {
         setIsExpressionInputActive(false)
-        setIsQuadraticModeActive(false)
+        setIsPolynomialModeActive(false)
       }
       return
     }
@@ -1382,7 +1629,7 @@ function App() {
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
-    if (isQuadraticModeActive) {
+    if (isPolynomialModeActive) {
       if (
         selectedOperator === '+' ||
         selectedOperator === '-' ||
@@ -1390,7 +1637,7 @@ function App() {
         selectedOperator === '/' ||
         selectedOperator === '^'
       ) {
-        enterQuadraticModeWithToken(selectedOperator)
+        enterPolynomialModeWithToken(selectedOperator)
         return
       }
 
@@ -1398,7 +1645,7 @@ function App() {
         const normalizedDisplay = displayValue.replace(/\s+/g, '')
         const tokenForSquare =
           normalizedDisplay.endsWith('a') || normalizedDisplay.endsWith('A') ? '²' : 'a²'
-        enterQuadraticModeWithToken(tokenForSquare)
+        enterPolynomialModeWithToken(tokenForSquare)
         return
       }
 
@@ -1468,7 +1715,7 @@ function App() {
     setPendingOperator(selectedOperator)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
   // "=" butonu: bekleyen işlemi çalıştırır.
@@ -1490,7 +1737,7 @@ function App() {
       setCalculationJob(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
-      setIsQuadraticModeActive(false)
+      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1514,7 +1761,7 @@ function App() {
       setPendingOperator(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
-      setIsQuadraticModeActive(false)
+      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1535,7 +1782,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(false)
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
   // Hafıza (memory) tuşları:
@@ -1573,7 +1820,7 @@ function App() {
       return Number.isFinite(nextValue) ? nextValue : previousMemory
     })
     setLastPressedValue(direction === 'add' ? 'M+' : 'M-')
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
   const usePiValue = () => {
@@ -1602,7 +1849,7 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
-    setIsQuadraticModeActive(false)
+    setIsPolynomialModeActive(false)
   }
 
   const formatHistoryTimestamp = (timestamp: number): string => {
@@ -1638,8 +1885,8 @@ function App() {
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
-          : isQuadraticModeActive
-            ? 'Denklem modu aktif: örn 5a^2+3a=8 yazıp Enter/Q ile çöz, Grafik ile çiz.'
+          : isPolynomialModeActive
+            ? 'Polinom modu aktif: örn 2a^3-5a+1=0 yazıp Enter/Q ile çöz, Grafik ile çiz.'
             : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
@@ -1661,11 +1908,11 @@ function App() {
       flashVirtualKey,
       handleEqual,
       handleOperatorSelect,
-      enterQuadraticModeWithToken,
-      solveQuadraticEquationFromDisplay,
+      enterPolynomialModeWithToken,
+      solvePolynomialEquationFromDisplay,
       displayValue,
       isExpressionInputActive,
-      isQuadraticModeActive,
+      isPolynomialModeActive,
       isShortcutHelpOpen,
     }
   })
@@ -1688,7 +1935,7 @@ function App() {
   // - f          => faktöriyel (x!)
   // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
   // - a          => denklem modunda değişken ekler
-  // - q          => ekrandaki ikinci derece denklemi çözer
+  // - q          => ekrandaki polinom denklemi çözer
   // - c          => C (temizle)
   // - Backspace  => son karakteri sil
   // - Delete     => C gibi tamamını temizle
@@ -1737,14 +1984,14 @@ function App() {
 
       if (lowerKey === 'q') {
         event.preventDefault()
-        context.solveQuadraticEquationFromDisplay()
+        context.solvePolynomialEquationFromDisplay()
         context.flashVirtualKey('solve-equation')
         return
       }
 
       if (lowerKey === 'a') {
         event.preventDefault()
-        context.enterQuadraticModeWithToken('a')
+        context.enterPolynomialModeWithToken('a')
         context.flashVirtualKey('a')
         return
       }
@@ -1801,10 +2048,10 @@ function App() {
       if (event.key === 'Enter') {
         event.preventDefault()
         const currentDisplayValue = context.displayValue.toLowerCase()
-        const shouldSolveQuadratic = context.isQuadraticModeActive || currentDisplayValue.includes('a')
+        const shouldSolvePolynomial = context.isPolynomialModeActive || currentDisplayValue.includes('a')
 
-        if (shouldSolveQuadratic) {
-          context.solveQuadraticEquationFromDisplay()
+        if (shouldSolvePolynomial) {
+          context.solvePolynomialEquationFromDisplay()
           context.flashVirtualKey('solve-equation')
           return
         }
@@ -1816,7 +2063,7 @@ function App() {
 
       if (event.key === '=') {
         event.preventDefault()
-        context.enterQuadraticModeWithToken('=')
+        context.enterPolynomialModeWithToken('=')
         context.flashVirtualKey('=')
         return
       }
@@ -1977,7 +2224,7 @@ function App() {
         </div>
         <p className="subtitle">
           Toplama, çıkarma, çarpma, bölme, üs, kök, logaritma, ln, e^x, yüzde,
-          binde, kare, ters, mutlak değer, faktöriyel, mod ve ikinci derece denklem
+          binde, kare, ters, mutlak değer, faktöriyel, mod ve polinom denklemler
         </p>
 
         {/* 5 satırlık ekran alanı: alt satırda sonuç, sol üstte son basılan değer. */}
@@ -2027,7 +2274,7 @@ function App() {
               <button
                 type="button"
                 className={`operator-button variable ${activeVirtualKey === 'a' ? 'key-pressed' : ''}`}
-                onClick={() => enterQuadraticModeWithToken('a')}
+                onClick={() => enterPolynomialModeWithToken('a')}
               >
                 a
               </button>
@@ -2302,7 +2549,7 @@ function App() {
                 <kbd>A</kbd> : Denklem modunda değişken ekler
               </li>
               <li>
-                <kbd>Q</kbd> : Ekrandaki ikinci derece denklemi çözer
+                <kbd>Q</kbd> : Ekrandaki polinom denklemi çözer
               </li>
               <li className="shortcut-section">
                 <strong>Bilimsel kısayollar:</strong>
