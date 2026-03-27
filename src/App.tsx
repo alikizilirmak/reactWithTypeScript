@@ -1048,6 +1048,7 @@ function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
+  const [isEquationToolsPanelVisible, setIsEquationToolsPanelVisible] = useState<boolean>(false)
   const [equationGraphInput, setEquationGraphInput] = useState<string>('a^2')
   const [equationGraphData, setEquationGraphData] = useState<EquationGraphData | null>(null)
   const [equationGraphError, setEquationGraphError] = useState<string>('')
@@ -1460,6 +1461,20 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
+  }
+
+  const handleOpenEquationToolsPanel = () => {
+    setIsEquationToolsPanelVisible(true)
+    const expressionText = displayValue.trim()
+    const initialInput = expressionText === '0' ? equationGraphInput : expressionText
+    setEquationGraphInput(initialInput)
+    setEquationGraphError('')
+    setEquationSolveResult('')
+    setIsEquationSolveError(false)
+
+    if (initialInput !== '') {
+      drawEquationGraph(initialInput)
+    }
   }
 
   // Rakam butonları için giriş fonksiyonu.
@@ -2186,7 +2201,11 @@ function App() {
               >
                 )
               </button>
-              <button type="button" className="operator-button graph" disabled>
+              <button
+                type="button"
+                className="operator-button graph"
+                onClick={handleOpenEquationToolsPanel}
+              >
                 Grafik
               </button>
             </div>
@@ -2345,8 +2364,104 @@ function App() {
             </button>
           </div>
 
+        </div>
+      </main>
+      {/* Soldaki ayrı div: son 10 işlemin tarihçesi */}
+      <aside className="history" aria-label="İşlem geçmişi">
+        <div className="history-header">
+          <h2>İşlem Geçmişi</h2>
+          <button
+            type="button"
+            className="clear-history"
+            onClick={clearHistory}
+            disabled={history.length === 0}
+          >
+            Tümünü Temizle
+          </button>
+        </div>
+        <div className="history-filters" role="group" aria-label="Geçmiş filtresi">
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('all')}
+          >
+            Tümü
+          </button>
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'success' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('success')}
+          >
+            Başarılı
+          </button>
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'error' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('error')}
+          >
+            Hatalı
+          </button>
+          <button
+            type="button"
+            className={`history-filter ${historyFilter === 'expression' ? 'active' : ''}`}
+            onClick={() => setHistoryFilter('expression')}
+          >
+            İfade
+          </button>
+        </div>
+
+        <div className="history-content">
+          {filteredHistory.length === 0 ? (
+            <p className="empty-history">
+              {history.length === 0
+                ? 'Henüz işlem yapılmadı.'
+                : 'Seçili filtrede gösterilecek kayıt yok.'}
+            </p>
+          ) : (
+            <ol className="history-list">
+              {filteredHistory.map((item, index) => (
+                <li key={`${item.expression}-${index}`} className="history-row">
+                  <span className="history-index">{index + 1}.</span>
+                  <button
+                    type="button"
+                    className={`history-item ${item.isError ? 'error' : 'success'}`}
+                    onClick={() => applyHistoryItem(item)}
+                  >
+                    <span className="history-expression">{item.expression}</span>
+                    <span className="history-timestamp">
+                      {formatHistoryTimestamp(item.createdAt)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </aside>
+
+      <aside
+        className={`equation-tools-panel ${isEquationToolsPanelVisible ? 'visible' : ''}`}
+        aria-label="Denklem çözüm ve grafik paneli"
+      >
+        {!isEquationToolsPanelVisible ? (
+          <div className="equation-tools-panel-placeholder">
+            <p>Grafik paneli kapalı.</p>
+            <button type="button" className="show-panel-button" onClick={handleOpenEquationToolsPanel}>
+              Grafik Panelini Aç
+            </button>
+          </div>
+        ) : (
           <section className="equation-tools" aria-label="Denklem çözüm ve grafik alanı">
-            <h3>Denklem Çözüm ve Grafik</h3>
+            <div className="equation-tools-header">
+              <h3>Denklem Çözüm ve Grafik</h3>
+              <button
+                type="button"
+                className="hide-panel-button"
+                onClick={() => setIsEquationToolsPanelVisible(false)}
+              >
+                Kapat
+              </button>
+            </div>
             <label className="graph-input-label" htmlFor="graph-expression-input">
               Fonksiyon / denklem
             </label>
@@ -2451,84 +2566,15 @@ function App() {
             ) : equationGraphError ? (
               <p className="graph-error">{equationGraphError || 'Grafik oluşturulamadı.'}</p>
             ) : (
-              <p className="graph-empty">Grafik için yukarıdan fonksiyon veya denklem girin.</p>
+              <div className="graph-empty-wrap">
+                <p className="graph-empty">Grafik için yukarıdan fonksiyon veya denklem girin.</p>
+                <button type="button" className="graph-empty-action" onClick={handleGraphInputSubmit}>
+                  İlk Grafiği Çiz
+                </button>
+              </div>
             )}
           </section>
-
-        </div>
-      </main>
-
-      {/* Sağdaki ayrı div: son 10 işlemin tarihçesi */}
-      <aside className="history" aria-label="İşlem geçmişi">
-        <div className="history-header">
-          <h2>İşlem Geçmişi</h2>
-          <button
-            type="button"
-            className="clear-history"
-            onClick={clearHistory}
-            disabled={history.length === 0}
-          >
-            Tümünü Temizle
-          </button>
-        </div>
-        <div className="history-filters" role="group" aria-label="Geçmiş filtresi">
-          <button
-            type="button"
-            className={`history-filter ${historyFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setHistoryFilter('all')}
-          >
-            Tümü
-          </button>
-          <button
-            type="button"
-            className={`history-filter ${historyFilter === 'success' ? 'active' : ''}`}
-            onClick={() => setHistoryFilter('success')}
-          >
-            Başarılı
-          </button>
-          <button
-            type="button"
-            className={`history-filter ${historyFilter === 'error' ? 'active' : ''}`}
-            onClick={() => setHistoryFilter('error')}
-          >
-            Hatalı
-          </button>
-          <button
-            type="button"
-            className={`history-filter ${historyFilter === 'expression' ? 'active' : ''}`}
-            onClick={() => setHistoryFilter('expression')}
-          >
-            İfade
-          </button>
-        </div>
-
-        <div className="history-content">
-          {filteredHistory.length === 0 ? (
-            <p className="empty-history">
-              {history.length === 0
-                ? 'Henüz işlem yapılmadı.'
-                : 'Seçili filtrede gösterilecek kayıt yok.'}
-            </p>
-          ) : (
-            <ol className="history-list">
-              {filteredHistory.map((item, index) => (
-                <li key={`${item.expression}-${index}`} className="history-row">
-                  <span className="history-index">{index + 1}.</span>
-                  <button
-                    type="button"
-                    className={`history-item ${item.isError ? 'error' : 'success'}`}
-                    onClick={() => applyHistoryItem(item)}
-                  >
-                    <span className="history-expression">{item.expression}</span>
-                    <span className="history-timestamp">
-                      {formatHistoryTimestamp(item.createdAt)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
+        )}
       </aside>
 
       {/* H veya ? ile açılan mini kısayol rehberi */}
