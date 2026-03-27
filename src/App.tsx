@@ -1052,6 +1052,8 @@ function App() {
   const [equationGraphInput, setEquationGraphInput] = useState<string>('')
   const [equationGraphData, setEquationGraphData] = useState<EquationGraphData | null>(null)
   const [equationGraphError, setEquationGraphError] = useState<string>('')
+  const [equationSolveResult, setEquationSolveResult] = useState<string>('')
+  const [isEquationSolveError, setIsEquationSolveError] = useState<boolean>(false)
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
@@ -1431,6 +1433,8 @@ function App() {
     setEquationGraphInput(initialInput)
     setEquationGraphData(null)
     setEquationGraphError('')
+    setEquationSolveResult('')
+    setIsEquationSolveError(false)
     setIsEquationGraphOpen(true)
 
     if (initialInput !== '') {
@@ -1446,6 +1450,8 @@ function App() {
     const expressionText = equationGraphInput.trim()
     if (expressionText === '') {
       setEquationGraphError('Lütfen çözülecek bir polinom denklem girin.')
+      setEquationSolveResult('')
+      setIsEquationSolveError(false)
       return
     }
 
@@ -1455,10 +1461,14 @@ function App() {
 
     if (isError) {
       setEquationGraphError(resultText)
+      setEquationSolveResult(resultText)
+      setIsEquationSolveError(true)
       return
     }
 
     setEquationGraphError('')
+    setEquationSolveResult(resultText)
+    setIsEquationSolveError(false)
     setDisplayValue(resultText)
     setLastPressedValue(expressionText)
     addExpressionToHistory(expressionText, resultText, false)
@@ -2569,7 +2579,11 @@ function App() {
                 className="graph-input"
                 type="text"
                 value={equationGraphInput}
-                onChange={(event) => setEquationGraphInput(event.target.value)}
+                onChange={(event) => {
+                  setEquationGraphInput(event.target.value)
+                  setEquationSolveResult('')
+                  setIsEquationSolveError(false)
+                }}
                 placeholder="örn: a²+5 veya a²+5=9"
                 autoComplete="off"
                 spellCheck={false}
@@ -2583,6 +2597,12 @@ function App() {
                 </button>
               </div>
             </div>
+            {equationSolveResult && (
+              <div className={`graph-solution ${isEquationSolveError ? 'error' : ''}`}>
+                <p className="graph-solution-title">Çözüm Sonucu</p>
+                <p className="graph-solution-value">{equationSolveResult}</p>
+              </div>
+            )}
             <p className="graph-note">
               Not: <code>=</code> yazarsan <code>(sol - sağ)=0</code> grafiği çizilir; eşittir
               yoksa doğrudan <code>y = f(a)</code> çizilir.
@@ -2662,6 +2682,8 @@ function App() {
               onClick={() => {
                 setIsEquationGraphOpen(false)
                 setEquationGraphError('')
+                setEquationSolveResult('')
+                setIsEquationSolveError(false)
               }}
             >
               Kapat

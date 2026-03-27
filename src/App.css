@@ -703,6 +703,27 @@
   background: #115e59;
 }
 
+.graph-action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.graph-solve-button {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #7c3aed;
+  cursor: pointer;
+}
+
+.graph-solve-button:hover {
+  background: #6d28d9;
+}
+
 .graph-summary {
   margin: 0.35rem 0;
   color: #1f2937;
@@ -755,6 +776,39 @@
   margin: 0.5rem 0;
   color: #991b1b;
   font-weight: 600;
+}
+
+.graph-solution {
+  margin: 0.55rem 0 0;
+  border: 1px solid #d1d5db;
+  border-radius: 0.55rem;
+  padding: 0.58rem 0.7rem;
+  background: #f8fafc;
+}
+
+.graph-solution-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.graph-solution-value {
+  margin: 0.22rem 0 0;
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.graph-solution.error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.graph-solution.error .graph-solution-title,
+.graph-solution.error .graph-solution-value {
+  color: #991b1b;
 }
 
 .graph-modal button {
@@ -856,6 +910,14 @@
   background: #14b8a6;
 }
 
+.app-layout.theme-dark .graph-solve-button {
+  background: #6d28d9;
+}
+
+.app-layout.theme-dark .graph-solve-button:hover {
+  background: #7c3aed;
+}
+
 .app-layout.theme-dark .graph-summary code {
   color: #93c5fd;
 }
@@ -898,6 +960,29 @@
 }
 
 .app-layout.theme-dark .graph-error {
+  color: #fca5a5;
+}
+
+.app-layout.theme-dark .graph-solution {
+  border-color: #374151;
+  background: #111827;
+}
+
+.app-layout.theme-dark .graph-solution-title {
+  color: #94a3b8;
+}
+
+.app-layout.theme-dark .graph-solution-value {
+  color: #f3f4f6;
+}
+
+.app-layout.theme-dark .graph-solution.error {
+  border-color: #7f1d1d;
+  background: #3f1111;
+}
+
+.app-layout.theme-dark .graph-solution.error .graph-solution-title,
+.app-layout.theme-dark .graph-solution.error .graph-solution-value {
   color: #fca5a5;
 }
 
