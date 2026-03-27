@@ -1048,8 +1048,7 @@ function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => readThemeFromStorage())
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
-  const [isEquationGraphOpen, setIsEquationGraphOpen] = useState<boolean>(false)
-  const [equationGraphInput, setEquationGraphInput] = useState<string>('')
+  const [equationGraphInput, setEquationGraphInput] = useState<string>('a^2')
   const [equationGraphData, setEquationGraphData] = useState<EquationGraphData | null>(null)
   const [equationGraphError, setEquationGraphError] = useState<string>('')
   const [equationSolveResult, setEquationSolveResult] = useState<string>('')
@@ -1424,22 +1423,6 @@ function App() {
 
     setEquationGraphData(graphResult.data)
     setEquationGraphError('')
-  }
-
-  const openEquationGraphFromDisplay = () => {
-    const expressionText = displayValue.trim()
-    const initialInput = expressionText === '0' ? '' : expressionText
-
-    setEquationGraphInput(initialInput)
-    setEquationGraphData(null)
-    setEquationGraphError('')
-    setEquationSolveResult('')
-    setIsEquationSolveError(false)
-    setIsEquationGraphOpen(true)
-
-    if (initialInput !== '') {
-      drawEquationGraph(initialInput)
-    }
   }
 
   const handleGraphInputSubmit = () => {
@@ -2203,11 +2186,7 @@ function App() {
               >
                 )
               </button>
-              <button
-                type="button"
-                className="operator-button graph"
-                onClick={openEquationGraphFromDisplay}
-              >
+              <button type="button" className="operator-button graph" disabled>
                 Grafik
               </button>
             </div>
@@ -2365,6 +2344,116 @@ function App() {
               ⌫
             </button>
           </div>
+
+          <section className="equation-tools" aria-label="Denklem çözüm ve grafik alanı">
+            <h3>Denklem Çözüm ve Grafik</h3>
+            <label className="graph-input-label" htmlFor="graph-expression-input">
+              Fonksiyon / denklem
+            </label>
+            <div className="graph-form">
+              <input
+                id="graph-expression-input"
+                className="graph-input"
+                type="text"
+                value={equationGraphInput}
+                onChange={(event) => {
+                  setEquationGraphInput(event.target.value)
+                  setEquationSolveResult('')
+                  setIsEquationSolveError(false)
+                }}
+                placeholder="örn: a²+5 veya a²+5=9"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <div className="graph-action-buttons">
+                <button type="button" className="graph-draw-button" onClick={handleGraphInputSubmit}>
+                  Grafiği Çiz
+                </button>
+                <button type="button" className="graph-solve-button" onClick={handleGraphSolveSubmit}>
+                  Denklemi Çöz
+                </button>
+              </div>
+            </div>
+            {equationSolveResult && (
+              <div className={`graph-solution ${isEquationSolveError ? 'error' : ''}`}>
+                <p className="graph-solution-title">Çözüm Sonucu</p>
+                <p className="graph-solution-value">{equationSolveResult}</p>
+              </div>
+            )}
+            <p className="graph-note">
+              Not: <code>=</code> yazarsan <code>(sol - sağ)=0</code> grafiği çizilir; eşittir yoksa
+              doğrudan <code>y = f(a)</code> çizilir.
+            </p>
+            {equationGraphData ? (
+              <>
+                <p className="graph-summary">
+                  Denklem: <code>{equationGraphData.expression}</code>
+                </p>
+                <p className="graph-summary">
+                  Grafiği çizilen fonksiyon: <code>y = {equationGraphData.polynomialText}</code>
+                </p>
+                <div className="graph-board" role="img" aria-label="Koordinat düzleminde denklem grafiği">
+                  <svg viewBox="0 0 360 260" preserveAspectRatio="none">
+                    {(() => {
+                      const width = 360
+                      const height = 260
+                      const rangeX = equationGraphData.xMax - equationGraphData.xMin
+                      const rangeY = equationGraphData.yMax - equationGraphData.yMin
+                      const toSvgX = (x: number) =>
+                        ((x - equationGraphData.xMin) / rangeX) * width
+                      const toSvgY = (y: number) =>
+                        height - ((y - equationGraphData.yMin) / rangeY) * height
+                      const graphPath = equationGraphData.points
+                        .map((point, index) => {
+                          const command = index === 0 ? 'M' : 'L'
+                          return `${command} ${toSvgX(point.x)} ${toSvgY(point.y)}`
+                        })
+                        .join(' ')
+                      const xAxisVisible =
+                        equationGraphData.yMin <= 0 && equationGraphData.yMax >= 0
+                      const yAxisVisible =
+                        equationGraphData.xMin <= 0 && equationGraphData.xMax >= 0
+                      const xAxisY = toSvgY(0)
+                      const yAxisX = toSvgX(0)
+
+                      return (
+                        <>
+                          <rect x="0" y="0" width={width} height={height} className="graph-bg" />
+                          {xAxisVisible && (
+                            <line
+                              x1="0"
+                              y1={xAxisY}
+                              x2={width}
+                              y2={xAxisY}
+                              className="graph-axis"
+                            />
+                          )}
+                          {yAxisVisible && (
+                            <line
+                              x1={yAxisX}
+                              y1="0"
+                              x2={yAxisX}
+                              y2={height}
+                              className="graph-axis"
+                            />
+                          )}
+                          <path d={graphPath} className="graph-curve" />
+                        </>
+                      )
+                    })()}
+                  </svg>
+                </div>
+                <p className="graph-range">
+                  a aralığı: [{equationGraphData.xMin}, {equationGraphData.xMax}] | y aralığı:{' '}
+                  [{formatCompactNumber(equationGraphData.yMin)}, {formatCompactNumber(equationGraphData.yMax)}]
+                </p>
+              </>
+            ) : equationGraphError ? (
+              <p className="graph-error">{equationGraphError || 'Grafik oluşturulamadı.'}</p>
+            ) : (
+              <p className="graph-empty">Grafik için yukarıdan fonksiyon veya denklem girin.</p>
+            )}
+          </section>
 
         </div>
       </main>
@@ -2553,144 +2642,6 @@ function App() {
         </div>
       )}
 
-      {isEquationGraphOpen && (
-        <div
-          className="graph-backdrop"
-          role="presentation"
-          onClick={() => {
-            setIsEquationGraphOpen(false)
-            setEquationGraphError('')
-          }}
-        >
-          <div
-            className="graph-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Denklem grafiği"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3>Denklem Grafiği</h3>
-            <label className="graph-input-label" htmlFor="graph-expression-input">
-              Fonksiyon / denklem
-            </label>
-            <div className="graph-form">
-              <input
-                id="graph-expression-input"
-                className="graph-input"
-                type="text"
-                value={equationGraphInput}
-                onChange={(event) => {
-                  setEquationGraphInput(event.target.value)
-                  setEquationSolveResult('')
-                  setIsEquationSolveError(false)
-                }}
-                placeholder="örn: a²+5 veya a²+5=9"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <div className="graph-action-buttons">
-                <button type="button" className="graph-draw-button" onClick={handleGraphInputSubmit}>
-                  Grafiği Çiz
-                </button>
-                <button type="button" className="graph-solve-button" onClick={handleGraphSolveSubmit}>
-                  Denklemi Çöz
-                </button>
-              </div>
-            </div>
-            {equationSolveResult && (
-              <div className={`graph-solution ${isEquationSolveError ? 'error' : ''}`}>
-                <p className="graph-solution-title">Çözüm Sonucu</p>
-                <p className="graph-solution-value">{equationSolveResult}</p>
-              </div>
-            )}
-            <p className="graph-note">
-              Not: <code>=</code> yazarsan <code>(sol - sağ)=0</code> grafiği çizilir; eşittir
-              yoksa doğrudan <code>y = f(a)</code> çizilir.
-            </p>
-            {equationGraphData ? (
-              <>
-                <p className="graph-summary">
-                  Denklem: <code>{equationGraphData.expression}</code>
-                </p>
-                <p className="graph-summary">
-                  Grafiği çizilen fonksiyon: <code>y = {equationGraphData.polynomialText}</code>
-                </p>
-                <div className="graph-board" role="img" aria-label="Koordinat düzleminde denklem grafiği">
-                  <svg viewBox="0 0 360 260" preserveAspectRatio="none">
-                    {(() => {
-                      const width = 360
-                      const height = 260
-                      const rangeX = equationGraphData.xMax - equationGraphData.xMin
-                      const rangeY = equationGraphData.yMax - equationGraphData.yMin
-                      const toSvgX = (x: number) =>
-                        ((x - equationGraphData.xMin) / rangeX) * width
-                      const toSvgY = (y: number) =>
-                        height - ((y - equationGraphData.yMin) / rangeY) * height
-                      const graphPath = equationGraphData.points
-                        .map((point, index) => {
-                          const command = index === 0 ? 'M' : 'L'
-                          return `${command} ${toSvgX(point.x)} ${toSvgY(point.y)}`
-                        })
-                        .join(' ')
-                      const xAxisVisible =
-                        equationGraphData.yMin <= 0 && equationGraphData.yMax >= 0
-                      const yAxisVisible =
-                        equationGraphData.xMin <= 0 && equationGraphData.xMax >= 0
-                      const xAxisY = toSvgY(0)
-                      const yAxisX = toSvgX(0)
-
-                      return (
-                        <>
-                          <rect x="0" y="0" width={width} height={height} className="graph-bg" />
-                          {xAxisVisible && (
-                            <line
-                              x1="0"
-                              y1={xAxisY}
-                              x2={width}
-                              y2={xAxisY}
-                              className="graph-axis"
-                            />
-                          )}
-                          {yAxisVisible && (
-                            <line
-                              x1={yAxisX}
-                              y1="0"
-                              x2={yAxisX}
-                              y2={height}
-                              className="graph-axis"
-                            />
-                          )}
-                          <path d={graphPath} className="graph-curve" />
-                        </>
-                      )
-                    })()}
-                  </svg>
-                </div>
-                <p className="graph-range">
-                  a aralığı: [{equationGraphData.xMin}, {equationGraphData.xMax}] | y aralığı:{' '}
-                  [{formatCompactNumber(equationGraphData.yMin)}, {formatCompactNumber(equationGraphData.yMax)}]
-                </p>
-              </>
-            ) : equationGraphError ? (
-              <p className="graph-error">{equationGraphError || 'Grafik oluşturulamadı.'}</p>
-            ) : (
-              <p className="graph-empty">Grafik için yukarıdan fonksiyon veya denklem girin.</p>
-            )}
-            <button
-              type="button"
-              className="graph-close-button"
-              onClick={() => {
-                setIsEquationGraphOpen(false)
-                setEquationGraphError('')
-                setEquationSolveResult('')
-                setIsEquationSolveError(false)
-              }}
-            >
-              Kapat
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
