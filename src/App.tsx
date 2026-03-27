@@ -160,6 +160,10 @@ type QuadraticCoefficientsParseResult =
       errorText: string
     }
 
+type QuadraticParseOptions = {
+  allowSingleSidedExpression?: boolean
+}
+
 type EquationGraphPoint = {
   x: number
   y: number
@@ -215,7 +219,9 @@ const formatQuadraticPolynomial = (
 const parseQuadraticCoefficients = (
   rawExpression: string,
   variableSymbol = 'a',
+  options: QuadraticParseOptions = {},
 ): QuadraticCoefficientsParseResult => {
+  const { allowSingleSidedExpression = false } = options
   const expression = rawExpression.replaceAll(',', '.').replace(/\s+/g, '')
   if (!expression) {
     return {
@@ -228,21 +234,6 @@ const parseQuadraticCoefficients = (
     .replaceAll(variableSymbol.toUpperCase(), variableSymbol)
     .replace(/\^2/g, '²')
   const expressionParts = normalizedExpression.split('=')
-
-  if (expressionParts.length !== 2) {
-    return {
-      isError: true,
-      errorText: 'Denklem bir adet "=" içermelidir.',
-    }
-  }
-
-  const [leftSide, rightSide] = expressionParts
-  if (leftSide === '' || rightSide === '') {
-    return {
-      isError: true,
-      errorText: 'Eşitliğin her iki tarafında da ifade olmalıdır.',
-    }
-  }
 
   const normalizeTerms = (sideExpression: string): string[] => {
     const withLeadingSign = /^[+-]/.test(sideExpression) ? sideExpression : `+${sideExpression}`
@@ -309,6 +300,39 @@ const parseQuadraticCoefficients = (
     }
   }
 
+  if (expressionParts.length === 1 && allowSingleSidedExpression) {
+    const singleSideCoefficients = parseSide(expressionParts[0] ?? '')
+    if (!singleSideCoefficients) {
+      return {
+        isError: true,
+        errorText: `Fonksiyon formatı geçersiz. Örn: 5${variableSymbol}²+3${variableSymbol}+8`,
+      }
+    }
+
+    return {
+      isError: false,
+      coefficientA: singleSideCoefficients.a,
+      coefficientB: singleSideCoefficients.b,
+      coefficientC: singleSideCoefficients.c,
+      normalizedExpression,
+    }
+  }
+
+  if (expressionParts.length !== 2) {
+    return {
+      isError: true,
+      errorText: 'Denklem bir adet "=" içermelidir.',
+    }
+  }
+
+  const [leftSide, rightSide] = expressionParts
+  if (leftSide === '' || rightSide === '') {
+    return {
+      isError: true,
+      errorText: 'Eşitliğin her iki tarafında da ifade olmalıdır.',
+    }
+  }
+
   const leftCoefficients = parseSide(leftSide)
   const rightCoefficients = parseSide(rightSide)
   if (!leftCoefficients || !rightCoefficients) {
@@ -328,7 +352,9 @@ const parseQuadraticCoefficients = (
 }
 
 const buildQuadraticGraphData = (rawExpression: string, variableSymbol = 'a') => {
-  const parseResult = parseQuadraticCoefficients(rawExpression, variableSymbol)
+  const parseResult = parseQuadraticCoefficients(rawExpression, variableSymbol, {
+    allowSingleSidedExpression: true,
+  })
   if (parseResult.isError) {
     return parseResult
   }
@@ -776,6 +802,7 @@ function App() {
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState<boolean>(false)
   const [isEquationGraphOpen, setIsEquationGraphOpen] = useState<boolean>(false)
+  const [equationGraphInput, setEquationGraphInput] = useState<string>('')
   const [equationGraphData, setEquationGraphData] = useState<EquationGraphData | null>(null)
   const [equationGraphError, setEquationGraphError] = useState<string>('')
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
@@ -1159,20 +1186,35 @@ function App() {
     setIsQuadraticModeActive(false)
   }
 
-  const openEquationGraphFromDisplay = () => {
-    const expressionText = displayValue.trim()
-    const graphResult = buildQuadraticGraphData(expressionText, 'a')
+  const drawEquationGraph = (expressionText: string) => {
+    const graphResult = buildQuadraticGraphData(expressionText.trim(), 'a')
 
     if (graphResult.isError) {
       setEquationGraphData(null)
       setEquationGraphError(graphResult.errorText)
-      setIsEquationGraphOpen(true)
       return
     }
 
     setEquationGraphData(graphResult.data)
     setEquationGraphError('')
+  }
+
+  const openEquationGraphFromDisplay = () => {
+    const expressionText = displayValue.trim()
+    const initialInput = expressionText === '0' ? '' : expressionText
+
+    setEquationGraphInput(initialInput)
+    setEquationGraphData(null)
+    setEquationGraphError('')
     setIsEquationGraphOpen(true)
+
+    if (initialInput !== '') {
+      drawEquationGraph(initialInput)
+    }
+  }
+
+  const handleGraphInputSubmit = () => {
+    drawEquationGraph(equationGraphInput)
   }
 
   // Rakam butonları için giriş fonksiyonu.
@@ -2349,7 +2391,10 @@ function App() {
         <div
           className="graph-backdrop"
           role="presentation"
-          onClick={() => setIsEquationGraphOpen(false)}
+          onClick={() => {
+            setIsEquationGraphOpen(false)
+            setEquationGraphError('')
+          }}
         >
           <div
             className="graph-modal"
@@ -2359,6 +2404,34 @@ function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <h3>Denklem Grafiği</h3>
+            <label className="graph-input-label" htmlFor="graph-expression-input">
+              Fonksiyon / denklem
+            </label>
+            <div className="graph-input-row">
+              <input
+                id="graph-expression-input"
+                className="graph-input"
+                type="text"
+                value={equationGraphInput}
+                onChange={(event) => setEquationGraphInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    handleGraphInputSubmit()
+                  }
+                }}
+                placeholder="örn: a²+5 veya a²+5=9"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button type="button" className="graph-draw-button" onClick={handleGraphInputSubmit}>
+                Grafiği Çiz
+              </button>
+            </div>
+            <p className="graph-note">
+              Not: <code>=</code> yazarsan <code>(sol - sağ)=0</code> grafiği çizilir; eşittir
+              yoksa doğrudan <code>y = f(a)</code> çizilir.
+            </p>
             {equationGraphData ? (
               <>
                 <p className="graph-summary">
@@ -2423,10 +2496,19 @@ function App() {
                   [{formatCompactNumber(equationGraphData.yMin)}, {formatCompactNumber(equationGraphData.yMax)}]
                 </p>
               </>
-            ) : (
+            ) : equationGraphError ? (
               <p className="graph-error">{equationGraphError || 'Grafik oluşturulamadı.'}</p>
+            ) : (
+              <p className="graph-empty">Grafik için yukarıdan fonksiyon veya denklem girin.</p>
             )}
-            <button type="button" onClick={() => setIsEquationGraphOpen(false)}>
+            <button
+              type="button"
+              className="graph-close-button"
+              onClick={() => {
+                setIsEquationGraphOpen(false)
+                setEquationGraphError('')
+              }}
+            >
               Kapat
             </button>
           </div>
