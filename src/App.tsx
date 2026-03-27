@@ -1055,7 +1055,6 @@ function App() {
   const [isWaitingForSecondValue, setIsWaitingForSecondValue] =
     useState<boolean>(false)
   const [isExpressionInputActive, setIsExpressionInputActive] = useState<boolean>(false)
-  const [isPolynomialModeActive, setIsPolynomialModeActive] = useState<boolean>(false)
   const [activeVirtualKey, setActiveVirtualKey] = useState<string | null>(null)
   const calculationSequenceRef = useRef<number>(0)
   const handledJobIdsRef = useRef<Set<number>>(new Set())
@@ -1069,11 +1068,8 @@ function App() {
     flashVirtualKey: (key: string) => void
     handleEqual: () => void
     handleOperatorSelect: (operator: Operator) => void
-    enterPolynomialModeWithToken: (token: string) => void
-    solvePolynomialEquationFromDisplay: () => void
     displayValue: string
     isExpressionInputActive: boolean
-    isPolynomialModeActive: boolean
     isShortcutHelpOpen: boolean
   } | null>(null)
 
@@ -1377,10 +1373,7 @@ function App() {
     const currentDisplay = displayValue.trim()
     const parsedCurrentValue = parseNumberInput(currentDisplay)
     const pendingOperatorToken =
-      !isExpressionInputActive &&
-      pendingOperator !== null &&
-      isWaitingForSecondValue &&
-      !isPolynomialModeActive
+      !isExpressionInputActive && pendingOperator !== null && isWaitingForSecondValue
         ? pendingOperator
         : ''
     const canReuseCurrentDisplay =
@@ -1397,40 +1390,25 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(true)
-    setIsPolynomialModeActive(false)
   }
 
-  const enterPolynomialModeWithToken = (token: string) => {
-    const normalizedToken = token === '^2' ? '²' : token
-    const canAppendToCurrentDisplay =
-      displayValue !== '0' &&
-      (isPolynomialModeActive || parseNumberInput(displayValue) !== null || isExpressionInputActive)
-    const nextValue = `${canAppendToCurrentDisplay ? displayValue : ''}${normalizedToken}`
-
-    setDisplayValue(nextValue)
-    setLastPressedValue(nextValue)
-    setStoredValue(null)
-    setPendingOperator(null)
-    setCalculationJob(null)
-    setIsWaitingForSecondValue(false)
-    setIsExpressionInputActive(false)
-    setIsPolynomialModeActive(true)
-  }
-
-  const solvePolynomialEquationFromDisplay = () => {
-    const expressionText = displayValue.trim()
+  const solvePolynomialEquationFromInput = (rawExpression: string, options?: { syncDisplay?: boolean }) => {
+    const expressionText = rawExpression.trim()
     const { resultText, isError } = evaluatePolynomialEquation(expressionText, 'a')
 
-    setDisplayValue(resultText)
-    setLastPressedValue(expressionText)
-    addExpressionToHistory(expressionText, resultText, isError)
+    if (options?.syncDisplay !== false) {
+      setDisplayValue(resultText)
+      setLastPressedValue(expressionText)
+      addExpressionToHistory(expressionText, resultText, isError)
 
-    setStoredValue(null)
-    setPendingOperator(null)
-    setCalculationJob(null)
-    setIsWaitingForSecondValue(true)
-    setIsExpressionInputActive(false)
-    setIsPolynomialModeActive(false)
+      setStoredValue(null)
+      setPendingOperator(null)
+      setCalculationJob(null)
+      setIsWaitingForSecondValue(true)
+      setIsExpressionInputActive(false)
+    }
+
+    return { resultText, isError }
   }
 
   const drawEquationGraph = (expressionText: string) => {
@@ -1464,14 +1442,36 @@ function App() {
     drawEquationGraph(equationGraphInput)
   }
 
-  // Rakam butonları için giriş fonksiyonu.
-  // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
-  const appendDigit = (digit: string) => {
-    if (isPolynomialModeActive) {
-      enterPolynomialModeWithToken(digit)
+  const handleGraphSolveSubmit = () => {
+    const expressionText = equationGraphInput.trim()
+    if (expressionText === '') {
+      setEquationGraphError('Lütfen çözülecek bir polinom denklem girin.')
       return
     }
 
+    const { resultText, isError } = solvePolynomialEquationFromInput(expressionText, {
+      syncDisplay: false,
+    })
+
+    if (isError) {
+      setEquationGraphError(resultText)
+      return
+    }
+
+    setEquationGraphError('')
+    setDisplayValue(resultText)
+    setLastPressedValue(expressionText)
+    addExpressionToHistory(expressionText, resultText, false)
+    setStoredValue(null)
+    setPendingOperator(null)
+    setCalculationJob(null)
+    setIsWaitingForSecondValue(true)
+    setIsExpressionInputActive(false)
+  }
+
+  // Rakam butonları için giriş fonksiyonu.
+  // Eğer yeni ikinci sayı bekleniyorsa ekrandaki değeri sıfırdan başlatır.
+  const appendDigit = (digit: string) => {
     if (isExpressionInputActive) {
       appendExpressionToken(digit)
       return
@@ -1482,7 +1482,6 @@ function App() {
       setLastPressedValue(digit)
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
-      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1490,7 +1489,6 @@ function App() {
       setDisplayValue(digit)
       setLastPressedValue(digit)
       setIsExpressionInputActive(false)
-      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1498,16 +1496,10 @@ function App() {
     setDisplayValue(nextValue)
     setLastPressedValue(nextValue)
     setIsExpressionInputActive(false)
-    setIsPolynomialModeActive(false)
   }
 
   // Ondalık nokta ekleme işlemi.
   const appendDecimal = () => {
-    if (isPolynomialModeActive) {
-      enterPolynomialModeWithToken('.')
-      return
-    }
-
     if (isExpressionInputActive) {
       appendExpressionToken('.')
       return
@@ -1518,7 +1510,6 @@ function App() {
       setLastPressedValue('0.')
       setIsWaitingForSecondValue(false)
       setIsExpressionInputActive(false)
-      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1527,13 +1518,12 @@ function App() {
       setDisplayValue(nextValue)
       setLastPressedValue(nextValue)
       setIsExpressionInputActive(false)
-      setIsPolynomialModeActive(false)
     }
   }
 
   // Pozitif/negatif işaretini çevirir (±).
   const toggleSign = () => {
-    if (isExpressionInputActive || isPolynomialModeActive) {
+    if (isExpressionInputActive) {
       const expression = displayValue.trim()
       if (!expression || expression === '0') {
         return
@@ -1581,13 +1571,12 @@ function App() {
 
   // Backspace davranışı: son girilen karakteri siler.
   const backspaceDisplay = () => {
-    if (isExpressionInputActive || isPolynomialModeActive) {
+    if (isExpressionInputActive) {
       if (displayValue.length <= 1) {
         setDisplayValue('0')
         setLastPressedValue('')
         setIsExpressionInputActive(false)
-        setIsPolynomialModeActive(false)
-        return
+          return
       }
 
       const nextValue = displayValue.slice(0, -1)
@@ -1596,8 +1585,7 @@ function App() {
 
       if (!/[()+\-*/^=]/.test(nextValue)) {
         setIsExpressionInputActive(false)
-        setIsPolynomialModeActive(false)
-      }
+        }
       return
     }
 
@@ -1629,30 +1617,6 @@ function App() {
   // Operatör butonuna basıldığında çalışır.
   // İlk sayı saklanır, ikinci sayı için bekleme moduna geçilir.
   const handleOperatorSelect = (selectedOperator: Operator) => {
-    if (isPolynomialModeActive) {
-      if (
-        selectedOperator === '+' ||
-        selectedOperator === '-' ||
-        selectedOperator === '*' ||
-        selectedOperator === '/' ||
-        selectedOperator === '^'
-      ) {
-        enterPolynomialModeWithToken(selectedOperator)
-        return
-      }
-
-      if (selectedOperator === 'x²') {
-        const normalizedDisplay = displayValue.replace(/\s+/g, '')
-        const tokenForSquare =
-          normalizedDisplay.endsWith('a') || normalizedDisplay.endsWith('A') ? '²' : 'a²'
-        enterPolynomialModeWithToken(tokenForSquare)
-        return
-      }
-
-      setDisplayValue('Denklem modunda +, -, *, /, ^ ve x² kullanılabilir.')
-      return
-    }
-
     if (isExpressionInputActive) {
       if (
         selectedOperator === '+' ||
@@ -1715,7 +1679,6 @@ function App() {
     setPendingOperator(selectedOperator)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
-    setIsPolynomialModeActive(false)
   }
 
   // "=" butonu: bekleyen işlemi çalıştırır.
@@ -1737,7 +1700,6 @@ function App() {
       setCalculationJob(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
-      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1761,7 +1723,6 @@ function App() {
       setPendingOperator(null)
       setIsWaitingForSecondValue(true)
       setIsExpressionInputActive(false)
-      setIsPolynomialModeActive(false)
       return
     }
 
@@ -1782,7 +1743,6 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(false)
     setIsExpressionInputActive(false)
-    setIsPolynomialModeActive(false)
   }
 
   // Hafıza (memory) tuşları:
@@ -1820,7 +1780,6 @@ function App() {
       return Number.isFinite(nextValue) ? nextValue : previousMemory
     })
     setLastPressedValue(direction === 'add' ? 'M+' : 'M-')
-    setIsPolynomialModeActive(false)
   }
 
   const usePiValue = () => {
@@ -1849,7 +1808,6 @@ function App() {
     setCalculationJob(null)
     setIsWaitingForSecondValue(true)
     setIsExpressionInputActive(false)
-    setIsPolynomialModeActive(false)
   }
 
   const formatHistoryTimestamp = (timestamp: number): string => {
@@ -1885,9 +1843,7 @@ function App() {
         ? 'Seçili işlem derece bekliyor.'
         : isRatioOperator(pendingOperator ?? '+')
           ? 'Seçili işlem oran bekliyor.'
-          : isPolynomialModeActive
-            ? 'Polinom modu aktif: örn 2a^3-5a+1=0 yazıp Enter/Q ile çöz, Grafik ile çiz.'
-            : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin.'
+          : 'Rakam girip operatör seçebilir veya parantezli ifadeyi ekranda yazabilirsin. Polinom için Grafik ekranını kullan.'
 
   // Component kapanırken bekleyen timeout'u temizliyoruz.
   useEffect(() => {
@@ -1908,11 +1864,8 @@ function App() {
       flashVirtualKey,
       handleEqual,
       handleOperatorSelect,
-      enterPolynomialModeWithToken,
-      solvePolynomialEquationFromDisplay,
       displayValue,
       isExpressionInputActive,
-      isPolynomialModeActive,
       isShortcutHelpOpen,
     }
   })
@@ -1934,8 +1887,6 @@ function App() {
   // - u          => mutlak değer (|x|)
   // - f          => faktöriyel (x!)
   // - ( )        => ekranda parantezli ifade girişini başlatır/sürdürür
-  // - a          => denklem modunda değişken ekler
-  // - q          => ekrandaki polinom denklemi çözer
   // - c          => C (temizle)
   // - Backspace  => son karakteri sil
   // - Delete     => C gibi tamamını temizle
@@ -1979,20 +1930,6 @@ function App() {
           event.preventDefault()
           setIsShortcutHelpOpen(false)
         }
-        return
-      }
-
-      if (lowerKey === 'q') {
-        event.preventDefault()
-        context.solvePolynomialEquationFromDisplay()
-        context.flashVirtualKey('solve-equation')
-        return
-      }
-
-      if (lowerKey === 'a') {
-        event.preventDefault()
-        context.enterPolynomialModeWithToken('a')
-        context.flashVirtualKey('a')
         return
       }
 
@@ -2047,26 +1984,11 @@ function App() {
 
       if (event.key === 'Enter') {
         event.preventDefault()
-        const currentDisplayValue = context.displayValue.toLowerCase()
-        const shouldSolvePolynomial = context.isPolynomialModeActive || currentDisplayValue.includes('a')
-
-        if (shouldSolvePolynomial) {
-          context.solvePolynomialEquationFromDisplay()
-          context.flashVirtualKey('solve-equation')
-          return
-        }
-
         context.handleEqual()
         context.flashVirtualKey('=')
         return
       }
 
-      if (event.key === '=') {
-        event.preventDefault()
-        context.enterPolynomialModeWithToken('=')
-        context.flashVirtualKey('=')
-        return
-      }
 
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -2270,13 +2192,6 @@ function App() {
                 onClick={() => appendExpressionToken(')')}
               >
                 )
-              </button>
-              <button
-                type="button"
-                className={`operator-button variable ${activeVirtualKey === 'a' ? 'key-pressed' : ''}`}
-                onClick={() => enterPolynomialModeWithToken('a')}
-              >
-                a
               </button>
               <button
                 type="button"
@@ -2545,12 +2460,6 @@ function App() {
               <li>
                 <kbd>(</kbd> <kbd>)</kbd> : Parantezli ifadede grup önceliği
               </li>
-              <li>
-                <kbd>A</kbd> : Denklem modunda değişken ekler
-              </li>
-              <li>
-                <kbd>Q</kbd> : Ekrandaki polinom denklemi çözer
-              </li>
               <li className="shortcut-section">
                 <strong>Bilimsel kısayollar:</strong>
               </li>
@@ -2654,26 +2563,25 @@ function App() {
             <label className="graph-input-label" htmlFor="graph-expression-input">
               Fonksiyon / denklem
             </label>
-            <div className="graph-input-row">
+            <div className="graph-form">
               <input
                 id="graph-expression-input"
                 className="graph-input"
                 type="text"
                 value={equationGraphInput}
                 onChange={(event) => setEquationGraphInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    handleGraphInputSubmit()
-                  }
-                }}
                 placeholder="örn: a²+5 veya a²+5=9"
                 autoComplete="off"
                 spellCheck={false}
               />
-              <button type="button" className="graph-draw-button" onClick={handleGraphInputSubmit}>
-                Grafiği Çiz
-              </button>
+              <div className="graph-action-buttons">
+                <button type="button" className="graph-draw-button" onClick={handleGraphInputSubmit}>
+                  Grafiği Çiz
+                </button>
+                <button type="button" className="graph-solve-button" onClick={handleGraphSolveSubmit}>
+                  Denklemi Çöz
+                </button>
+              </div>
             </div>
             <p className="graph-note">
               Not: <code>=</code> yazarsan <code>(sol - sağ)=0</code> grafiği çizilir; eşittir

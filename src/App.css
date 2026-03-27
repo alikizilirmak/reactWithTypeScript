@@ -262,15 +262,8 @@
   background: #e5e7eb;
 }
 
-.constants-pad .variable {
-  border-color: #c7d2fe;
-  background: #eef2ff;
-  color: #3730a3;
-  font-weight: 700;
-}
-
-.constants-pad .variable:hover {
-  background: #e0e7ff;
+.constants-pad .graph {
+  grid-column: 1 / -1;
 }
 
 .number-pad {
@@ -967,16 +960,6 @@
 
 .app-layout.theme-dark .constants-pad .paren:hover {
   background: #4b5563;
-}
-
-.app-layout.theme-dark .constants-pad .variable {
-  border-color: #4f46e5;
-  background: #312e81;
-  color: #e0e7ff;
-}
-
-.app-layout.theme-dark .constants-pad .variable:hover {
-  background: #4338ca;
 }
 
 .app-layout.theme-dark .theme-switch-track {
